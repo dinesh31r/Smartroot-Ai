@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+venv/
+venv_tf212/
+
+# Large ML files
+*.h5
+*.onnx
+
+# OS files
+.DS_Store
