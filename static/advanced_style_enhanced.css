@@ -1,0 +1,1117 @@
+/* ============================================================
+    SMARTROOT-AI — APPLE-LIKE DESIGN SYSTEM
+   ============================================================ */
+
+/* ---- DESIGN TOKENS (San Francisco inspired) ---- */
+:root {
+  /* Colors - Minimalist White Theme */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f7;
+  /* Apple light gray background */
+  --bg-tertiary: #ffffff;
+
+  --text-primary: #1d1d1f;
+  /* Apple almost black */
+  --text-secondary: #86868b;
+  /* Apple gray text */
+  --text-tertiary: #d2d2d7;
+
+  --accent-blue: #0071e3;
+  /* SF Blue */
+  --accent-green: #34c759;
+  /* SF Green */
+  --accent-orange: #ff9500;
+  /* SF Orange */
+  --accent-red: #ff3b30;
+  /* SF Red */
+
+  /* Shadows - Diffused & Soft */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.12);
+  --shadow-float: 0 20px 40px rgba(0, 0, 0, 0.1);
+
+  /* Typography */
+  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Spacing & Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+}
+
+/* ---- GLOBAL RESET & BASE ---- */
+html,
+body,
+.stApp,
+.main {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-stack) !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Styled Upload Widgets - "Box" Look */
+/* Styled Upload Widgets - "Box" Look */
+[data-testid="stFileUploader"],
+[data-testid="stSelectbox"],
+[data-testid="stCheckbox"] {
+  background: transparent !important;
+  /* Transparent background */
+  border-radius: 20px !important;
+  box-shadow: none !important;
+  border: none !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  margin-bottom: 1rem !important;
+  color: white !important;
+}
+
+[data-testid="stFileUploader"] label,
+[data-testid="stFileUploader"] label *,
+[data-testid="stFileUploader"] [data-testid="stWidgetLabel"],
+[data-testid="stFileUploader"] [data-testid="stWidgetLabel"] *,
+[data-testid="stSelectbox"] label,
+[data-testid="stCheckbox"] label,
+[data-testid="stCheckbox"] p {
+  color: #f5f5f7 !important;
+  /* Bright white text */
+  font-weight: 500 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Hover effects for Pro Inputs */
+[data-testid="stFileUploader"]:hover,
+[data-testid="stSelectbox"]:hover,
+[data-testid="stCheckbox"]:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Dropzone Styling - Pure black, no border */
+[data-testid="fileUploadDropzone"],
+[data-testid="stFileUploadDropzone"],
+[data-testid="stFileUploader"] > section,
+[data-testid="stFileUploader"] > div > section,
+.stFileUploader section,
+.uploadedFile {
+  background: #000000 !important;
+  border: none !important;
+  color: #ffffff !important;
+  padding: 1.5rem !important;
+  min-height: 80px !important;
+  border-radius: 12px !important;
+}
+
+/* Force remove any borders */
+[data-testid="stFileUploader"] *,
+.stFileUploader * {
+  border: none !important;
+}
+
+[data-testid="fileUploadDropzone"] small,
+[data-testid="stFileUploader"] small {
+  color: #6e6e73 !important;
+  font-size: 0.9rem !important;
+}
+
+[data-testid="fileUploadDropzone"]:hover,
+[data-testid="stFileUploader"] > section:hover {
+  background: #1a1a1a !important;
+}
+
+/* Input/Select Internal Styling */
+[data-testid="stSelectbox"]>div>div {
+  background-color: #1c1c1e !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-testid="stSelectbox"] svg {
+  fill: white !important;
+}
+
+/* Staggered animation for inputs */
+[data-testid="stFileUploader"]:nth-of-type(1) {
+  animation-delay: 0.1s !important;
+}
+
+[data-testid="stFileUploader"]:nth-of-type(2) {
+  animation-delay: 0.2s !important;
+}
+
+[data-testid="stSelectbox"] {
+  animation-delay: 0.3s !important;
+}
+
+[data-testid="stCheckbox"]:nth-of-type(1) {
+  animation-delay: 0.4s !important;
+}
+
+[data-testid="stCheckbox"]:nth-of-type(2) {
+  animation-delay: 0.5s !important;
+}
+
+[data-testid="stFileUploader"]:hover,
+[data-testid="stSelectbox"]:hover {
+  box-shadow: var(--shadow-md) !important;
+  transform: translateY(-2px) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Header Box for Upload Section */
+.upload-header-box,
+.stress-result-box,
+.analytics-box {
+  background: #000000 !important;
+  /* Pro Black */
+  border-radius: 20px !important;
+  padding: 2rem !important;
+  margin-bottom: 2rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  color: white !important;
+  /* Ensure text is white */
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  animation: slideUpPop 0.8s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+/* Shine Effect for ALL Pro Boxes */
+.upload-header-box::before,
+.stress-result-box::before,
+.analytics-box::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+}
+
+.upload-header-box:hover::before,
+.stress-result-box:hover::before,
+.analytics-box:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.upload-header-box:hover,
+.stress-result-box:hover,
+.analytics-box:hover {
+  transform: scale(1.02) !important;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Fix text colors inside Pro Boxes */
+.upload-header-box p,
+.stress-result-box .stress-label,
+.stress-result-box .stress-value,
+.analytics-box .analytics-value,
+.analytics-box .analytics-label,
+.analytics-box .analytics-icon {
+  color: #f5f5f7 !important;
+}
+
+/* Force ALL text inside Pro boxes to be white, overriding global div rule */
+.upload-header-box div,
+.stress-result-box div,
+.analytics-box div {
+  color: white !important;
+}
+
+/* File Uploader Dropzone - Force Black with SOLID border */
+[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"],
+[data-testid="stFileUploader"] div[data-testid="stFileUploaderDropzone"],
+[data-testid="fileUploadDropzone"],
+section[data-testid="stFileUploader"]>div>div {
+  background-color: #0a0a0a !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-style: solid !important;
+}
+
+/* Browse Button - Force White Text */
+[data-testid="stFileUploader"] button,
+[data-testid="fileUploadDropzone"] button,
+[data-testid="stFileUploaderDropzone"] button,
+.stFileUploader button {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* Force button inner text white */
+[data-testid="stFileUploader"] button *,
+[data-testid="fileUploadDropzone"] button *,
+.stFileUploader button * {
+  color: #ffffff !important;
+}
+
+[data-testid="stFileUploader"] button:hover,
+[data-testid="fileUploadDropzone"] button:hover {
+  transform: scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5) !important;
+  background: linear-gradient(135deg, #059669, #047857) !important;
+}
+
+/* Uploaded file name visibility */
+[data-testid="stFileUploader"] [data-testid="stMarkdownContainer"] {
+  color: #ffffff !important;
+}
+
+[data-testid="stFileUploader"] li,
+[data-testid="stFileUploader"] span {
+  color: #ffffff !important;
+}
+
+/* File uploaded item styling */
+[data-testid="stFileUploader"] > div > div:last-child {
+  color: #ffffff !important;
+}
+
+[data-testid="stFileUploader"] small {
+  color: #a0a0a0 !important;
+}
+
+/* Checkbox box sizing - make larger */
+[data-testid="stCheckbox"] {
+  padding: 1rem 1.25rem !important;
+  min-height: 60px !important;
+}
+
+[data-testid="stCheckbox"] > label {
+  font-size: 0.95rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+[data-testid="stCheckbox"] input[type="checkbox"] {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  accent-color: #10b981 !important;
+}
+
+/* SUPER SPECIFIC TEXT COLOR OVERRIDES FOR INPUTS */
+[data-testid="stFileUploader"] label,
+[data-testid="stSelectbox"] label,
+[data-testid="stCheckbox"] label,
+[data-testid="stCheckbox"] p,
+[data-testid="stMarkdownContainer"] p {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Fix Dropzone Internal Text */
+[data-testid="stFileUploaderDropzone"] div,
+[data-testid="stFileUploaderDropzone"] small,
+[data-testid="stFileUploaderDropzone"] span {
+  color: #e5e5e5 !important;
+}
+
+/* Checkbox specific text fix */
+[data-testid="stCheckbox"] span {
+  color: #ffffff !important;
+}
+
+/* Uploaded file info styling */
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] {
+  background: #1a1a1a !important;
+  border-radius: 8px !important;
+  padding: 0.5rem 0.75rem !important;
+  margin-top: 0.5rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] span,
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] div {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] small {
+  color: #a0a0a0 !important;
+}
+
+/* Delete button in file uploader */
+[data-testid="stFileUploader"] button[kind="icon"] {
+  color: #ffffff !important;
+  background: transparent !important;
+}
+
+.stress-result-box .stress-label,
+.analytics-box .analytics-label {
+  color: #a1a1a6 !important;
+  /* Slightly dimmer for secondary text */
+}
+
+/* Make icons pop on hover */
+.upload-header-box:hover .feature-icon,
+.analytics-box:hover .analytics-icon {
+  transform: scale(1.1) rotate(-5deg);
+  transition: transform 0.3s ease;
+}
+
+/* Hide annoying Streamlit default elements */
+#MainMenu,
+footer,
+header[data-testid="stHeader"] {
+  visibility: hidden !important;
+  display: none !important;
+}
+
+.block-container {
+  padding-top: 2rem !important;
+  padding-bottom: 4rem !important;
+  max-width: 1080px !important;
+  /* Tighter Apple-like width */
+}
+
+/* ---- TYPOGRAPHY ---- */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-primary) !important;
+  font-family: var(--font-stack) !important;
+  font-weight: 600 !important;
+  /* Semibold titles */
+  letter-spacing: -0.015em !important;
+  /* Tighter tracking */
+}
+
+h1 {
+  font-size: 48px !important;
+  font-weight: 700 !important;
+  margin-bottom: 0.5em !important;
+}
+
+h2 {
+  font-size: 32px !important;
+  border: none !important;
+  /* Remove old border */
+  margin-top: 2.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+h3 {
+  font-size: 24px !important;
+  margin-top: 2rem !important;
+}
+
+p,
+li,
+span,
+label,
+div {
+  color: var(--text-primary);
+  line-height: 1.5 !important;
+  font-weight: 400;
+}
+
+/* ---- CARDS & CONTAINERS ---- */
+.section-card,
+.upload-section-card,
+.results-section-card,
+.parameters-section-card,
+[data-testid="metric-container"],
+[data-testid="stExpander"] {
+  background: var(--bg-secondary) !important;
+  border-radius: var(--radius-lg) !important;
+  border: none !important;
+  box-shadow: var(--shadow-sm) !important;
+  padding: 24px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  margin-bottom: 24px !important;
+}
+
+/* ---- PREMIUM FEATURE CARDS (Apple Pro Style) ---- */
+.feature-card {
+  background: #000000 !important;
+  /* Pure black like the reference */
+  border-radius: 20px !important;
+  /* Slightly more rounded */
+  padding: 2rem 1.5rem !important;
+  text-align: center !important;
+  color: white !important;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 140px !important;
+  cursor: pointer !important;
+}
+
+.feature-card:hover {
+  transform: scale(1.05) !important;
+  /* Distinct pop */
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.feature-card .feature-icon {
+  font-size: 2.5rem !important;
+  margin-bottom: 0.75rem !important;
+  transition: transform 0.3s ease !important;
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+.feature-card p {
+  color: #f5f5f7 !important;
+  /* Off-white text */
+  font-weight: 600 !important;
+  font-size: 1.1rem !important;
+  margin: 0 !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* Subtle shine effect */
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.feature-card:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Hover effects for interactive cards */
+.section-card:hover,
+[data-testid="metric-container"]:hover {
+  transform: scale(1.005) !important;
+  box-shadow: var(--shadow-md) !important;
+  background: #fbfbfd !important;
+  /* Slightly lighter on hover */
+}
+
+/* ---- BUTTONS (Apple Style - Dark Theme) ---- */
+button,
+[data-testid="baseButton-secondary"],
+[data-testid="baseButton-primary"] {
+  border-radius: 980px !important;
+  /* Pill shape */
+  padding: 12px 28px !important;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+  letter-spacing: -0.01em !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+  box-shadow: none !important;
+}
+
+/* Primary Button - Green gradient */
+[data-testid="baseButton-primary"] {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+}
+
+[data-testid="baseButton-primary"]:hover {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Secondary Button - Dark with border */
+[data-testid="baseButton-secondary"] {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-testid="baseButton-secondary"]:hover {
+  background: #1a1a1a !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Download button specific styling */
+.stDownloadButton button,
+[data-testid="stDownloadButton"] button {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  padding: 14px 28px !important;
+  border-radius: 980px !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+}
+
+.stDownloadButton button:hover,
+[data-testid="stDownloadButton"] button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5) !important;
+  background: linear-gradient(135deg, #059669, #047857) !important;
+}
+
+/* All button text must be visible */
+.stButton button p,
+.stButton button span,
+.stDownloadButton button p,
+.stDownloadButton button span,
+button p,
+button span {
+  color: #ffffff !important;
+}
+
+/* File Uploader */
+[data-testid="stFileUploader"] {
+  padding: 0 !important;
+}
+
+[data-testid="fileUploadDropzone"] {
+  background: white !important;
+  border: 1px dashed #d2d2d7 !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 40px !important;
+  box-shadow: none !important;
+}
+
+[data-testid="fileUploadDropzone"]:hover {
+  border-color: var(--accent-blue) !important;
+  background: #f5f5f7 !important;
+}
+
+/* ---- INPUTS ---- */
+/* ---- INPUTS (Global Fix) ---- */
+input,
+select,
+textarea,
+[data-testid="stNumberInput"] input {
+  background-color: #1c1c1e !important;
+  /* Dark Grey Input */
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+input:focus,
+textarea:focus {
+  background-color: #2c2c2e !important;
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.2) !important;
+}
+
+/* Fix Dropdown Menu Items */
+ul[data-testid="stSelectboxVirtualDropdown"] {
+  background-color: #1c1c1e !important;
+}
+
+ul[data-testid="stSelectboxVirtualDropdown"] li {
+  background-color: #1c1c1e !important;
+  color: white !important;
+}
+
+ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
+  background-color: #2c2c2e !important;
+}
+
+/* ---- METRICS ---- */
+[data-testid="metric-container"] {
+  background: white !important;
+  border: 1px solid #e5e5e5 !important;
+  box-shadow: var(--shadow-sm) !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+
+[data-testid="metric-container"] label {
+  color: var(--text-secondary) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+[data-testid="metric-container"] [data-testid="stMetricValue"] {
+  color: var(--text-primary) !important;
+  font-size: 36px !important;
+  font-weight: 600 !important;
+  letter-spacing: -1px !important;
+}
+
+/* ---- STICKY NAV ---- */
+.sticky-action-bar {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  margin: 0 -100% !important;
+  /* Full width hack */
+  padding: 16px 100% !important;
+  /* Full width hack */
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+}
+
+.sticky-action-inner {
+  max-width: 1080px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1rem;
+}
+
+.sticky-action-btn {
+  color: var(--text-primary) !important;
+  background: transparent !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 6px 12px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  transition: background 0.2s ease !important;
+}
+
+.sticky-action-btn:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: var(--accent-blue) !important;
+}
+
+/* ---- STRESS RESULT BOX ---- */
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stress-result-box {
+  background: white !important;
+  border-radius: var(--radius-xl) !important;
+  padding: 2rem !important;
+  text-align: center !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid rgba(0, 0, 0, 0.04) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  margin: 1.5rem 0 2.5rem 0 !important;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.stress-result-box:hover {
+  transform: scale(1.02) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08) !important;
+}
+
+.stress-result-box {
+  /* Base styles inherited from Pro Box rule above */
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  margin: 1.5rem 0 2.5rem 0 !important;
+}
+
+.stress-result-box::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #34c759, #0071e3);
+  /* Keep the colored accent line */
+}
+
+.stress-value {
+  font-size: 3.5rem !important;
+  /* Larger for impact */
+  font-weight: 800 !important;
+  margin: 0.5rem 0 1.5rem 0 !important;
+  background: linear-gradient(180deg, #ffffff 0%, #b0b0b0 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stress-reliability-pill {
+  background: rgba(255, 255, 255, 0.15) !important;
+  /* Translucent white */
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+/* ---- ANALYTICS BOXES ---- */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.analytics-box {
+  /* Base styles inherited from global Pro rule */
+  padding: 1.5rem !important;
+  text-align: center !important;
+}
+
+/* Transforms handled by global Pro rule */
+.analytics-box:hover {
+  transform: scale(1.02) !important;
+}
+
+.analytics-icon {
+  font-size: 2rem !important;
+  margin-bottom: 0.5rem !important;
+  transition: transform 0.3s ease;
+}
+
+.analytics-value {
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  color: white !important;
+}
+
+.analytics-label {
+  font-size: 0.9rem !important;
+  color: #a1a1a6 !important;
+  font-weight: 500 !important;
+}
+
+/* ---- TIMELINE (Right Side) ---- */
+.analysis-timeline-panel {
+  background: white !important;
+  border: 1px solid #e5e5e5 !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+.timeline-item {
+  color: var(--text-secondary) !important;
+}
+
+.timeline-item.active {
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+}
+
+.timeline-item.active .timeline-dot {
+  background: var(--accent-blue) !important;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15) !important;
+}
+
+/* ---- ALERTS ---- */
+.stAlert {
+  background-color: var(--bg-secondary) !important;
+  border-radius: var(--radius-md) !important;
+  border: none !important;
+  padding: 16px !important;
+}
+
+/* ---- SUMMARY CHIPS ---- */
+.summary-chip {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: none !important;
+  color: var(--text-primary) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 6px 14px !important;
+  border-radius: 999px !important;
+}
+
+/* ---- EXPANDER CONTENT FIX - WHITE TEXT ---- */
+[data-testid="stExpander"] {
+  background: #000000 !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  margin-bottom: 1rem !important;
+}
+
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] summary span,
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] p {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Table inside expanders - white text */
+[data-testid="stExpander"] table,
+[data-testid="stExpander"] th,
+[data-testid="stExpander"] td,
+[data-testid="stExpander"] tr,
+[data-testid="stExpander"] thead,
+[data-testid="stExpander"] tbody {
+  color: #ffffff !important;
+  background: transparent !important;
+}
+
+[data-testid="stExpander"] table {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+[data-testid="stExpander"] th {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #10b981 !important;
+  font-weight: 700 !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-testid="stExpander"] td {
+  padding: 10px 16px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  color: #e5e5e5 !important;
+}
+
+[data-testid="stExpander"] tr:hover td {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Expander arrow/icon */
+[data-testid="stExpander"] svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* All text inside expander content area */
+[data-testid="stExpander"] > div > div {
+  color: #ffffff !important;
+}
+
+/* ---- SCROLL PROGRESS ---- */
+#scrollProgress {
+  background: var(--accent-blue) !important;
+  height: 3px !important;
+}
+
+/* Animation Utilities - Enhanced "Pop" Entry */
+@keyframes slideUpPop {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.96);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.01);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.section-card,
+.metric-card,
+.upload-header-box,
+[data-testid="stFileUploader"],
+[data-testid="stSelectbox"],
+[data-testid="stCheckbox"],
+.stress-result-box,
+.analytics-box {
+  animation: slideUpPop 0.8s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+/* Clear specific animation declarations to avoid conflicts, rely on global rule above with offsets below */
+.stress-result-box {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  /* Animation handled by global rule */
+}
+
+/* ---- WARNINGS AND ALERTS (Apple Dark Theme) ---- */
+[data-testid="stAlert"],
+.stAlert {
+  background: #000000 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+}
+
+[data-testid="stAlert"] p,
+.stAlert p,
+[data-testid="stAlert"] span,
+.stAlert span {
+  color: #ffffff !important;
+}
+
+/* Warning specific styling */
+[data-testid="stAlert"][data-baseweb="notification"] {
+  background: #000000 !important;
+  border-left: 4px solid #f59e0b !important;
+}
+
+/* Success alert */
+.stSuccess {
+  background: #000000 !important;
+  border-left: 4px solid #10b981 !important;
+}
+
+/* Error alert */
+.stError {
+  background: #000000 !important;
+  border-left: 4px solid #ef4444 !important;
+}
+
+/* Info alert */
+.stInfo {
+  background: #000000 !important;
+  border-left: 4px solid #0ea5e9 !important;
+}
+
+/* ============================================================
+   GLOBAL OVERRIDES - HIGHEST SPECIFICITY
+   ============================================================ */
+
+/* Force remove ALL dashed borders from file uploaders */
+[class*="fileUpload"] *,
+[class*="FileUpload"] *,
+[data-testid*="FileUpload"] *,
+[data-testid*="fileUpload"] * {
+  border-style: solid !important;
+}
+
+/* Global file uploader button override */
+button[kind="secondary"],
+button[data-testid*="button"],
+[class*="uploadButton"],
+[class*="UploadButton"] {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+button[kind="secondary"] *,
+[class*="uploadButton"] *,
+[class*="UploadButton"] * {
+  color: #ffffff !important;
+}
+
+/* ============================================================
+   FIX HORIZONTAL SCROLLING - LOCK VIEWPORT
+   ============================================================ */
+
+/* Prevent horizontal overflow on all main containers */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+}
+
+.stApp {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+}
+
+[data-testid="stAppViewContainer"] {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
+[data-testid="stAppViewContainer"] > section {
+  overflow-x: hidden !important;
+}
+
+.main, [data-testid="stMain"] {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
+.block-container {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure all elements respect container width */
+.stApp img,
+.stApp video,
+.stApp iframe,
+.stApp table,
+.stApp pre,
+.stApp code {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+}
+
+/* Fix feature grid to not cause overflow */
+.feature-grid {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* Fix columns to not overflow */
+[data-testid="column"] {
+  overflow-x: hidden !important;
+}
+
+/* Ensure text wraps properly */
+p, span, div, h1, h2, h3, h4, h5, h6 {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Mobile specific fixes */
+@media screen and (max-width: 768px) {
+  html, body, .stApp, .main, [data-testid="stAppViewContainer"] {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+  }
+  
+  .block-container {
+    padding: 0.5rem !important;
+    max-width: 100% !important;
+  }
+  
+  /* Prevent any element from exceeding viewport */
+  .stApp * {
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
+}

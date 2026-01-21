@@ -6,11 +6,16 @@ __pycache__/
 
 # Virtual Environments
 venv/
+venv_tf/
 venv_tf212/
-
-# Large ML files
-*.h5
-*.onnx
 
 # OS files
 .DS_Store
+.env
+
+# Secrets (use Streamlit Cloud secrets management)
+.streamlit/secrets.toml
+
+# IDE
+.vscode/
+.idea/

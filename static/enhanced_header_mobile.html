@@ -1,0 +1,292 @@
+<style>
+  @keyframes colorPulse {
+    0% {
+      color: #10b981;
+      fill: #10b981;
+      stroke: #10b981;
+      filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.5));
+    }
+    25% {
+      color: #06b6d4;
+      fill: #06b6d4;
+      stroke: #06b6d4;
+      filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.6));
+    }
+    50% {
+      color: #0284c7;
+      fill: #0284c7;
+      stroke: #0284c7;
+      filter: drop-shadow(0 0 20px rgba(2, 132, 199, 0.7));
+    }
+    75% {
+      color: #06b6d4;
+      fill: #06b6d4;
+      stroke: #06b6d4;
+      filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.6));
+    }
+    100% {
+      color: #10b981;
+      fill: #10b981;
+      stroke: #10b981;
+      filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.5));
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .smartroot-header {
+    margin: 0 0 2rem 0;
+    padding: 1.5rem 1rem;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%);
+    border-bottom: 2px solid rgba(16, 185, 129, 0.2);
+    text-align: center;
+  }
+
+  .header-logo {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem auto;
+  }
+
+  .header-logo svg {
+    animation: colorPulse 3s ease-in-out infinite;
+    width: 100%;
+    height: 100%;
+  }
+
+  .header-title {
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin: 0.5rem 0;
+    color: #10b981;
+  }
+
+  .header-subtitle {
+    font-size: 0.95rem;
+    color: #64748b;
+    margin: 0 0 1.5rem 0;
+    font-style: italic;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .feature-item {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 0.75rem;
+    padding: 0.875rem;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .feature-item:hover {
+    border-color: rgba(6, 182, 212, 0.4);
+    box-shadow: 0 8px 20px rgba(6, 182, 212, 0.1);
+  }
+
+  .feature-icon {
+    font-size: 1.75rem;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  .feature-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #10b981;
+    margin: 0;
+  }
+
+  .stats-grid {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 1rem;
+    padding: 1.5rem 1rem;
+    margin: 1.5rem 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .stat-item {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #10b981;
+    margin: 0;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  .info-box {
+    background: linear-gradient(135deg, rgba(224, 242, 254, 0.3) 0%, rgba(240, 253, 244, 0.3) 100%);
+    border-left: 3px solid #06b6d4;
+    border-radius: 0.5rem;
+    padding: 0.875rem;
+    margin: 0.875rem 0;
+  }
+
+  .info-icon {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+
+  .info-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #06b6d4;
+    margin: 0.25rem 0;
+  }
+
+  .info-text {
+    font-size: 0.8rem;
+    color: #475569;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  @media (min-width: 600px) {
+    .stats-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .header-title {
+      font-size: 2rem;
+    }
+
+    .header-logo {
+      width: 90px;
+      height: 90px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .smartroot-header {
+      padding: 1rem 0.75rem;
+    }
+
+    .feature-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .header-title {
+      font-size: 1.4rem;
+    }
+
+    .header-logo {
+      width: 70px;
+      height: 70px;
+    }
+  }
+</style>
+
+<div class="smartroot-header" style="all: revert;";
+  <div class="header-logo">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 50 85 Q 45 75 45 65 Q 45 55 50 50" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M 45 65 L 35 75" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M 45 65 L 38 72" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M 50 65 L 60 75" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M 50 65 L 58 72" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <circle cx="35" cy="75" r="1.5" fill="currentColor"/>
+      <circle cx="38" cy="72" r="1.2" fill="currentColor"/>
+      <circle cx="60" cy="75" r="1.5" fill="currentColor"/>
+      <circle cx="58" cy="72" r="1.2" fill="currentColor"/>
+      <path d="M 50 50 Q 52 35 50 20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="40" cy="35" rx="8" ry="12" fill="currentColor" opacity="0.8" transform="rotate(-35 40 35)"/>
+      <ellipse cx="60" cy="38" rx="8" ry="12" fill="currentColor" opacity="0.8" transform="rotate(35 60 38)"/>
+      <ellipse cx="50" cy="25" rx="7" ry="11" fill="currentColor" opacity="0.9"/>
+      <circle cx="50" cy="15" r="4" fill="currentColor" opacity="0.7"/>
+      <path d="M 50 15 L 50 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+      <circle cx="30" cy="80" r="1.5" fill="currentColor" opacity="0.5"/>
+      <circle cx="70" cy="82" r="1.2" fill="currentColor" opacity="0.4"/>
+    </svg>
+  </div>
+
+  <h1 class="header-title">🌱 SmartRoot-AI</h1>
+  <p class="header-subtitle">Root Stress Detection & Analysis</p>
+
+  <div class="feature-grid">
+    <div class="feature-item">
+      <span class="feature-icon">🧠</span>
+      <p class="feature-name">AI</p>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">📊</span>
+      <p class="feature-name">Data</p>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">🌿</span>
+      <p class="feature-name">Roots</p>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">🤖</span>
+      <p class="feature-name">Guide</p>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">📈</span>
+      <p class="feature-name">Sim</p>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">✅</span>
+      <p class="feature-name">Check</p>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-item">
+      <p class="stat-value">98%</p>
+      <p class="stat-label">Accuracy</p>
+    </div>
+    <div class="stat-item">
+      <p class="stat-value">3+</p>
+      <p class="stat-label">Types</p>
+    </div>
+    <div class="stat-item">
+      <p class="stat-value">Real</p>
+      <p class="stat-label">Time</p>
+    </div>
+    <div class="stat-item">
+      <p class="stat-value">∞</p>
+      <p class="stat-label">Power</p>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <span class="info-icon">💡</span>
+    <p class="info-title">Best Results</p>
+    <p class="info-text">Upload clear, well-lit root images for accurate analysis.</p>
+  </div>
+
+  <div class="info-box">
+    <span class="info-icon">📱</span>
+    <p class="info-title">Formats</p>
+    <p class="info-text">JPG, PNG, JPEG (up to 200MB)</p>
+  </div>
+
+  <div class="info-box">
+    <span class="info-icon">🔒</span>
+    <p class="info-title">Private</p>
+    <p class="info-text">Images never stored after analysis.</p>
+  </div>
+</div>

@@ -1,0 +1,366 @@
+<!-- SmartRoot-AI Enhanced Header with Animated Logo -->
+
+<style>
+  /* Inline styles for Streamlit compatibility */
+  .smartroot-header-wrapper {
+    margin: 0 -1rem 2rem -1rem;
+    padding: 2rem 1rem;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(16, 185, 129, 0.08) 100%);
+    border-bottom: 2px solid rgba(16, 185, 129, 0.25);
+  }
+
+  .logo-container-wrapper {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .logo-svg-wrapper {
+    display: inline-block;
+    width: 100px;
+    height: 100px;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .logo-svg-wrapper {
+      width: 80px;
+      height: 80px;
+    }
+  }
+
+  .header-title-section {
+    margin-bottom: 2rem;
+  }
+
+  .header-title {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #10b981;
+    margin: 0 0 0.5rem 0;
+    background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header-subtitle {
+    font-size: 1rem;
+    color: #64748b;
+    margin: 0;
+    font-style: italic;
+  }
+
+  @media (max-width: 768px) {
+    .header-title {
+      font-size: 1.5rem;
+    }
+    .header-subtitle {
+      font-size: 0.9rem;
+    }
+  }
+</style>
+
+<div class="smartroot-header-wrapper">
+  <!-- Animated Logo Component -->
+  <div class="logo-container-wrapper">
+    <div class="logo-svg-wrapper">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; animation: colorPulse 3s ease-in-out infinite; filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.5));">
+        <!-- Root System -->
+        <g>
+          <!-- Main root -->
+          <path d="M 50 85 Q 45 75 45 65 Q 45 55 50 50" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          
+          <!-- Left branches -->
+          <path d="M 45 65 L 35 75" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M 45 65 L 38 72" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          
+          <!-- Right branches -->
+          <path d="M 50 65 L 60 75" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M 50 65 L 58 72" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          
+          <!-- Fine root hairs -->
+          <circle cx="35" cy="75" r="1.5" fill="currentColor"/>
+          <circle cx="38" cy="72" r="1.2" fill="currentColor"/>
+          <circle cx="60" cy="75" r="1.5" fill="currentColor"/>
+          <circle cx="58" cy="72" r="1.2" fill="currentColor"/>
+        </g>
+
+        <!-- Plant Shoot -->
+        <g>
+          <!-- Main stem -->
+          <path d="M 50 50 Q 52 35 50 20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          
+          <!-- Leaves -->
+          <ellipse cx="40" cy="35" rx="8" ry="12" fill="currentColor" opacity="0.8" transform="rotate(-35 40 35)"/>
+          <ellipse cx="60" cy="38" rx="8" ry="12" fill="currentColor" opacity="0.8" transform="rotate(35 60 38)"/>
+          <ellipse cx="50" cy="25" rx="7" ry="11" fill="currentColor" opacity="0.9"/>
+          
+          <!-- Top leaf/bud -->
+          <circle cx="50" cy="15" r="4" fill="currentColor" opacity="0.7"/>
+          <path d="M 50 15 L 50 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+        </g>
+
+        <!-- Soil particles -->
+        <circle cx="30" cy="80" r="1.5" fill="currentColor" opacity="0.5"/>
+        <circle cx="70" cy="82" r="1.2" fill="currentColor" opacity="0.4"/>
+        <circle cx="45" cy="85" r="1" fill="currentColor" opacity="0.4"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Logo with Title -->
+  <div class="header-title-section" style="text-align: center;">
+    <h1 class="header-title">🌱 SmartRoot-AI</h1>
+    <p class="header-subtitle">CNN-based Stress Detection with AI-Enhanced Root Architecture</p>
+  </div>
+
+  <!-- Enhanced Features Section -->
+  <div style="margin: 3rem 0; padding: 0;">
+    <style>
+      <div class="features-showcase">
+        <div class="feature-card">
+          <span class="feature-card-icon">📷</span>
+          <div class="feature-card-title">Root Image Upload</div>
+          <p class="feature-card-description">Upload clear root images for instant morphology and health analysis.</p>
+          <span class="feature-card-badge">Root Input</span>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🧬</span>
+          <div class="feature-card-title">Root Traits</div>
+          <p class="feature-card-description">Extract depth, width, density, tip count, and diameter distributions.</p>
+          <span class="feature-card-badge">DIRT-style</span>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🩺</span>
+          <div class="feature-card-title">Root Health</div>
+          <p class="feature-card-description">Health index, disease risk flags, symmetry, and nutrient uptake.</p>
+          <span class="feature-card-badge">Diagnostics</span>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🧠</span>
+          <div class="feature-card-title">CNN Stress Detection</div>
+          <p class="feature-card-description">Vetiver plant stress classification with confidence scoring.</p>
+          <span class="feature-card-badge">AI Powered</span>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">📈</span>
+          <div class="feature-card-title">Growth Simulation</div>
+          <p class="feature-card-description">Soil-aware root growth simulation with realism scoring.</p>
+          <span class="feature-card-badge">Simulation</span>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🤖</span>
+          <div class="feature-card-title">LLM Guidance</div>
+          <p class="feature-card-description">Biological explanations and improvement suggestions.</p>
+          <span class="feature-card-badge">Explainable</span>
+        </div>
+      </div>
+      }
+
+      .feature-card-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #10b981;
+        margin-bottom: 0.75rem;
+      }
+
+      .feature-card-description {
+        font-size: 0.95rem;
+        color: #64748b;
+        line-height: 1.6;
+      }
+
+      .feature-card-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%);
+        color: #10b981;
+        padding: 0.4rem 0.8rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 1rem;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+      }
+
+      /* Enhanced Stats Section */
+      .stats-banner {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.12) 100%);
+        border: 2px solid rgba(16, 185, 129, 0.25);
+        border-radius: 1.5rem;
+        padding: 2.5rem;
+        margin: 2rem 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 2rem;
+        box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
+      }
+
+      .stat-box {
+        text-align: center;
+        position: relative;
+      }
+
+      .stat-number {
+        font-size: 2.2rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      .stat-label {
+        font-size: 0.9rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* Gradient divider */
+      .gradient-divider {
+        height: 3px;
+        background: linear-gradient(90deg, transparent, #10b981, #06b6d4, transparent);
+        margin: 2rem 0;
+        border-radius: 999px;
+      }
+
+      /* Info callout boxes */
+      .info-callout {
+        background: linear-gradient(135deg, rgba(224, 242, 254, 0.4) 0%, rgba(240, 253, 244, 0.4) 100%);
+        border-left: 4px solid #06b6d4;
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+      }
+
+      .info-callout-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+      }
+
+      .info-callout-content {
+        flex: 1;
+      }
+
+      .info-callout-title {
+        font-weight: 600;
+        color: #06b6d4;
+        margin-bottom: 0.25rem;
+      }
+
+      .info-callout-text {
+        font-size: 0.9rem;
+        color: #475569;
+        line-height: 1.5;
+      }
+    </style>
+
+    <!-- Features Grid -->
+    <h2 style="text-align: center; margin-top: 3rem; margin-bottom: 2rem; border: none; padding: 0;">
+      ✨ Key Features
+    </h2>
+
+    <div class="features-showcase">
+      <div class="feature-card">
+        <span class="feature-card-icon">🧠</span>
+        <div class="feature-card-title">Advanced CNN Analysis</div>
+        <p class="feature-card-description">Deep neural network-based stress detection with real-time analysis of plant root images.</p>
+        <span class="feature-card-badge">AI Powered</span>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-card-icon">📊</span>
+        <div class="feature-card-title">Detailed Analytics</div>
+        <p class="feature-card-description">Comprehensive moisture and nutrient stress metrics with confidence scoring.</p>
+        <span class="feature-card-badge">Data Driven</span>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-card-icon">🌿</span>
+        <div class="feature-card-title">Root Architecture</div>
+        <p class="feature-card-description">Advanced visualization of root systems with AI-enhanced architectural analysis.</p>
+        <span class="feature-card-badge">Visual Analysis</span>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-card-icon">🤖</span>
+        <div class="feature-card-title">LLM Guidance</div>
+        <p class="feature-card-description">AI-powered biological recommendations tailored to your plant's specific stress conditions.</p>
+        <span class="feature-card-badge">Intelligent</span>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-card-icon">📈</span>
+        <div class="feature-card-title">Growth Simulation</div>
+        <p class="feature-card-description">Predict and simulate root growth patterns under different environmental conditions.</p>
+        <span class="feature-card-badge">Predictive</span>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-card-icon">✅</span>
+        <div class="feature-card-title">Realism Evaluation</div>
+        <p class="feature-card-description">Evaluate the biological realism of root architecture using advanced metrics.</p>
+        <span class="feature-card-badge">Validation</span>
+      </div>
+    </div>
+
+    <!-- Stats Banner -->
+    <div class="stats-banner">
+      <div class="stat-box">
+        <div class="stat-number">98%</div>
+        <div class="stat-label">Accuracy</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">3+</div>
+        <div class="stat-label">Stress Types</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">Real-time</div>
+        <div class="stat-label">Analysis</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">∞</div>
+        <div class="stat-label">Possibilities</div>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="gradient-divider"></div>
+
+    <!-- Info Callouts -->
+    <div class="info-callout">
+      <div class="info-callout-icon">💡</div>
+      <div class="info-callout-content">
+        <div class="info-callout-title">Optimal Results</div>
+        <div class="info-callout-text">Upload clear, well-lit images of root systems for the most accurate AI analysis and recommendations.</div>
+      </div>
+    </div>
+
+    <div class="info-callout">
+      <div class="info-callout-icon">📱</div>
+      <div class="info-callout-content">
+        <div class="info-callout-title">Supported Formats</div>
+        <div class="info-callout-text">Works with JPG, PNG, and JPEG formats. Maximum file size 200MB for optimal processing speed.</div>
+      </div>
+    </div>
+
+    <div class="info-callout">
+      <div class="info-callout-icon">🔒</div>
+      <div class="info-callout-content">
+        <div class="info-callout-title">Privacy First</div>
+        <div class="info-callout-text">Your plant images are processed securely and never stored after analysis completion.</div>
+      </div>
+    </div>
+  </div>
+</div>

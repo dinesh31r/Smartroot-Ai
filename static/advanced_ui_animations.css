@@ -1,0 +1,468 @@
+/* ============================================================
+🌱 SMARTROOT-AI — ADVANCED ANIMATIONS & INTERACTIVE EFFECTS
+============================================================ */
+
+/* ---- FLOATING ANIMATIONS ---- */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 8px 32px rgba(16, 185, 129, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.5), 0 8px 32px rgba(16, 185, 129, 0.25);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ---- FLOATING CARD EFFECT ---- */
+.floating-card {
+  animation: float 6s ease-in-out infinite !important;
+  transition: all 0.3s ease !important;
+}
+
+.floating-card:hover {
+  animation: float 3s ease-in-out infinite, glow 2s ease-in-out infinite !important;
+  transform: translateY(-5px) !important;
+}
+
+/* ---- METRIC CONTAINERS WITH ANIMATIONS ---- */
+[data-testid="metric-container"] {
+  animation: slideInLeft 0.6s ease-out !important;
+  border-radius: 1.5rem !important;
+  position: relative !important;
+  overflow: hidden !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 253, 244, 0.6) 100%) !important;
+  border: 2px solid rgba(16, 185, 129, 0.2) !important;
+}
+
+[data-testid="metric-container"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s ease !important;
+  z-index: 1;
+  pointer-events: none;
+}
+
+[data-testid="metric-container"]:hover::before {
+  left: 100%;
+}
+
+/* ---- INFO BOX ENHANCEMENTS ---- */
+[data-testid="info-box"],
+[data-testid="warning-box"],
+[data-testid="success-box"],
+[data-testid="error-box"] {
+  animation: slideInRight 0.6s ease-out !important;
+  position: relative !important;
+  overflow: hidden !important;
+  border-left-width: 5px !important;
+  border-radius: 1.25rem !important;
+}
+
+/* ---- BUTTON ANIMATIONS ---- */
+button {
+  position: relative !important;
+  overflow: hidden !important;
+  z-index: 1;
+}
+
+button::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 0 !important;
+  height: 0 !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.3) !important;
+  transform: translate(-50%, -50%) !important;
+  transition: width 0.6s, height 0.6s !important;
+  z-index: -1 !important;
+}
+
+button:active::before {
+  width: 300px !important;
+  height: 300px !important;
+}
+
+button:hover {
+  letter-spacing: 0.05em !important;
+  transition: all 0.3s ease !important;
+}
+
+/* ---- FILE UPLOADER WITH ANIMATION ---- */
+[data-testid="fileUploadDropzone"] {
+  animation: scaleIn 0.5s ease-out !important;
+  transition: all 0.3s ease !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+[data-testid="fileUploadDropzone"]::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.2), transparent) !important;
+  animation: shimmer 2s infinite !important;
+  pointer-events: none !important;
+}
+
+/* ---- EXPANDABLE SECTIONS ---- */
+[data-testid="expander"] {
+  animation: slideInLeft 0.6s ease-out !important;
+  transition: all 0.3s ease !important;
+}
+
+[data-testid="expander"]:hover {
+  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.15) !important;
+}
+
+/* ---- GRADIENT ANIMATED TEXT ---- */
+.gradient-animated-text {
+  background: linear-gradient(135deg, #10b981, #06b6d4, #10b981);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 6s ease infinite;
+  font-weight: 800;
+}
+
+/* ---- NEUMORPHISM EFFECT ---- */
+.neumorphic {
+  background: linear-gradient(135deg, #e2e8f0, #f8fafc);
+  box-shadow: 
+    8px 8px 16px rgba(0, 0, 0, 0.1),
+    -8px -8px 16px rgba(255, 255, 255, 0.7);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.neumorphic:hover {
+  box-shadow: 
+    6px 6px 12px rgba(0, 0, 0, 0.08),
+    -6px -6px 12px rgba(255, 255, 255, 0.8);
+  transform: translateY(-2px);
+}
+
+/* ---- MORPHIC BUTTON ---- */
+.morphic-btn {
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  color: #10b981;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 
+    5px 5px 10px rgba(0, 0, 0, 0.08),
+    -5px -5px 10px rgba(255, 255, 255, 0.8);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.morphic-btn:hover {
+  color: #059669;
+  box-shadow: 
+    8px 8px 12px rgba(0, 0, 0, 0.1),
+    -8px -8px 12px rgba(255, 255, 255, 0.8);
+  transform: translateY(-2px);
+}
+
+/* ---- CARD WITH HOVER EFFECT ---- */
+.enhanced-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.enhanced-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.enhanced-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 50px rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.enhanced-card:hover::before {
+  opacity: 1;
+}
+
+/* ---- LOADING SKELETON ---- */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  border-radius: 0.5rem;
+}
+
+/* ---- BADGE ANIMATIONS ---- */
+.badge-animated {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  animation: scaleIn 0.4s ease-out;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  border: 2px solid;
+  border-image: linear-gradient(135deg, #10b981, #06b6d4) 1;
+}
+
+/* ---- PROGRESS BAR ANIMATION ---- */
+.progress-animated {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-animated::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #06b6d4, #10b981);
+  background-size: 200% 100%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* ---- STAGGERED LIST ANIMATION ---- */
+.stagger-item {
+  animation: slideInLeft 0.6s ease-out;
+  animation-fill-mode: both;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0.1s; }
+.stagger-item:nth-child(2) { animation-delay: 0.2s; }
+.stagger-item:nth-child(3) { animation-delay: 0.3s; }
+.stagger-item:nth-child(4) { animation-delay: 0.4s; }
+.stagger-item:nth-child(5) { animation-delay: 0.5s; }
+
+/* ---- INTERACTIVE HOVER ZONES ---- */
+.interactive-zone {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  position: relative;
+}
+
+.interactive-zone:hover {
+  background: rgba(16, 185, 129, 0.08);
+  transform: scale(1.05);
+}
+
+.interactive-zone::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  border: 2px solid transparent;
+  background: linear-gradient(135deg, #10b981, #06b6d4) border-box;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.interactive-zone:hover::after {
+  opacity: 0.5;
+}
+
+/* ---- SMOOTH TRANSITIONS ---- */
+.smooth-transition {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- VISIBILITY ANIMATIONS ---- */
+@media (prefers-reduced-motion: no-preference) {
+  [data-testid="metric-container"],
+  [data-testid="info-box"],
+  [data-testid="expander"],
+  [data-testid="fileUploadDropzone"] {
+    animation: fadeInUp 0.6s ease-out !important;
+  }
+}
+
+/* ---- DARK MODE SUPPORT ---- */
+@media (prefers-color-scheme: dark) {
+  .enhanced-card {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+  
+  .neumorphic {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    box-shadow: 
+      8px 8px 16px rgba(0, 0, 0, 0.3),
+      -8px -8px 16px rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* ---- PULSE EFFECT FOR LOADING ---- */
+.pulse-loader {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ---- TOOLTIP ENHANCEMENT ---- */
+.enhanced-tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
+
+.enhanced-tooltip .tooltip-text {
+  visibility: hidden;
+  width: 220px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  text-align: center;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  position: absolute;
+  z-index: 100;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -110px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.enhanced-tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+.enhanced-tooltip .tooltip-text::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border: 5px solid transparent;
+  border-top-color: #10b981;
+}

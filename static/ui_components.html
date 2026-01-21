@@ -1,0 +1,241 @@
+<!-- SmartRoot-AI UI Components Library -->
+<!-- This file contains reusable HTML/CSS components for UI enhancements -->
+
+<div id="smartroot-components">
+  
+  <!-- FEATURE CARD COMPONENT -->
+  <style>
+    .feature-card {
+      background: linear-gradient(135deg, #f0fdf4 0%, #f0f9ff 100%);
+      border: 2px solid #e2e8f0;
+      border-radius: 1.25rem;
+      padding: 2rem;
+      margin: 1.5rem 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .feature-card:hover {
+      border-color: #10b981;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .feature-card h3 {
+      color: #059669;
+      font-size: 1.4rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .feature-card p {
+      color: #475569;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    /* ICON STYLES */
+    .icon-lg {
+      font-size: 2rem;
+      display: inline-block;
+      margin-right: 0.5rem;
+    }
+
+    /* BADGE STYLES */
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin: 0.25rem 0.25rem 0.25rem 0;
+    }
+
+    .badge-success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-info {
+      background: #dbeafe;
+      color: #0c4a6e;
+    }
+
+    /* PROGRESS BAR */
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 0.75rem 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%);
+      transition: width 0.3s ease;
+    }
+
+    /* STAT BOX */
+    .stat-box {
+      background: var(--bg-white);
+      border: 2px solid #e2e8f0;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .stat-box:hover {
+      border-color: #10b981;
+      background: linear-gradient(135deg, #f0fdf4 0%, #f0f9ff 100%);
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #10b981;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: #6b7280;
+      font-weight: 600;
+    }
+
+    /* DIVIDER VARIANTS */
+    .divider-gradient {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #10b981, transparent);
+      margin: 2rem 0;
+    }
+
+    /* ALERT BOX VARIANTS */
+    .alert {
+      border-radius: 1rem;
+      padding: 1.5rem;
+      border-left: 4px solid;
+      margin: 1rem 0;
+    }
+
+    .alert-success {
+      background: linear-gradient(135deg, #d1fae5 0%, #dbeafe 100%);
+      border-left-color: #10b981;
+      color: #065f46;
+    }
+
+    .alert-warning {
+      background: linear-gradient(135deg, #fef3c7 0%, #fecaca 100%);
+      border-left-color: #f59e0b;
+      color: #92400e;
+    }
+
+    .alert-info {
+      background: linear-gradient(135deg, #cffafe 0%, #ecfdf5 100%);
+      border-left-color: #06b6d4;
+      color: #164e63;
+    }
+
+    /* LOADING SPINNER */
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(16, 185, 129, 0.3);
+      border-top: 3px solid #10b981;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    /* TOOLTIP */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+      cursor: help;
+      border-bottom: 1px dotted #10b981;
+    }
+
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 200px;
+      background-color: #059669;
+      color: #fff;
+      text-align: center;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -100px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 0.85rem;
+    }
+
+    .tooltip .tooltiptext::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #059669 transparent transparent transparent;
+    }
+
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    /* GRADIENT TEXT */
+    .gradient-text {
+      background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 700;
+    }
+
+    /* GLASS MORPHISM EFFECT */
+    .glass {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 1rem;
+      padding: 1.5rem;
+    }
+  </style>
+
+  <!-- FOOTER COMPONENT -->
+  <footer style="
+    margin-top: 4rem;
+    padding: 2rem;
+    text-align: center;
+    border-top: 1px solid #e2e8f0;
+    color: #6b7280;
+    font-size: 0.9rem;
+  ">
+    <p>🌱 SmartRoot-AI v1.0 | Advanced Root Architecture Visualization & Stress Detection</p>
+    <p style="margin-top: 0.5rem; font-size: 0.85rem;">
+      Powered by Deep Learning & Biological AI Analysis
+    </p>
+  </footer>
+
+</div>
