@@ -47,6 +47,46 @@ warnings.filterwarnings(
 )
 
 # -------------------------------------------------
+# IMAGE VALIDATION HELPER
+# -------------------------------------------------
+def validate_uploaded_image(image_bytes, image_type="plant"):
+    """
+    Validate uploaded image is a proper image file.
+    Returns: (is_valid, error_message)
+    """
+    if image_bytes is None:
+        return False, "No image uploaded"
+    
+    if len(image_bytes) < 100:
+        return False, "File is too small to be a valid image"
+    
+    if len(image_bytes) > 10 * 1024 * 1024:  # 10MB limit
+        return False, "Image file is too large (max 10MB)"
+    
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        img.verify()  # Verify it's a valid image
+        
+        # Re-open to check dimensions (verify() closes the file)
+        img = Image.open(io.BytesIO(image_bytes))
+        width, height = img.size
+        
+        if width < 50 or height < 50:
+            return False, "Image is too small (minimum 50x50 pixels)"
+        
+        if width > 10000 or height > 10000:
+            return False, "Image is too large (maximum 10000x10000 pixels)"
+        
+        # Check if image format is supported
+        if img.format not in ['JPEG', 'PNG', 'JPG']:
+            return False, f"Unsupported image format: {img.format}. Please use JPG or PNG."
+        
+        return True, None
+        
+    except Exception as e:
+        return False, f"Invalid image file: {str(e)[:50]}"
+
+# -------------------------------------------------
 # PAGE CONFIG
 # -------------------------------------------------
 st.set_page_config(
@@ -1407,9 +1447,29 @@ plant_image_bytes = uploaded_file.getvalue() if uploaded_file else None
 root_image_bytes = root_image_file.getvalue() if root_image_file else None
 
 # -------------------------------------------------
+# IMAGE VALIDATION
+# -------------------------------------------------
+plant_image_valid = True
+root_image_valid = True
+
+if uploaded_file:
+    is_valid, error_msg = validate_uploaded_image(plant_image_bytes, "plant")
+    if not is_valid:
+        plant_image_valid = False
+        st.error(f"❌ **Invalid Plant Image:** {error_msg}")
+        st.warning("⚠️ Please upload a valid plant image (JPG or PNG format, clear photo of a vetiver plant)")
+
+if root_image_file:
+    is_valid, error_msg = validate_uploaded_image(root_image_bytes, "root")
+    if not is_valid:
+        root_image_valid = False
+        st.error(f"❌ **Invalid Root Image:** {error_msg}")
+        st.warning("⚠️ Please upload a valid root image (JPG or PNG format, clear photo of plant roots)")
+
+# -------------------------------------------------
 # ROOT IMAGE INTELLIGENCE (OPTIONAL)
 # -------------------------------------------------
-if root_image_file:
+if root_image_file and root_image_valid:
 
     try:
         skeleton_placeholder = st.empty()
@@ -1647,7 +1707,7 @@ if root_image_file:
 # -------------------------------------------------
 # MAIN PIPELINE
 # -------------------------------------------------
-if uploaded_file:
+if uploaded_file and plant_image_valid:
     # Update progress step
     st.session_state.current_step = 1
     
