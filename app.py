@@ -1470,16 +1470,45 @@ if root_image_file and root_image_valid:
             """,
             unsafe_allow_html=True
         )
+        
+        # Try to analyze root image - may fail if image doesn't contain roots
+        root_report = None
+        root_species = None
+        analysis_error = None
+        
         with st.spinner("Analyzing root image..."):
-            if fast_root_analysis:
-                root_report = cached_analyze_root_image_fast(root_image_bytes)
-            else:
-                root_report = cached_analyze_root_image(root_image_bytes)
-            if fast_overall:
-                root_species = cached_classify_root_species_fast(root_image_bytes)
-            else:
-                root_species = cached_classify_root_species(root_image_bytes)
+            try:
+                if fast_root_analysis:
+                    root_report = cached_analyze_root_image_fast(root_image_bytes)
+                else:
+                    root_report = cached_analyze_root_image(root_image_bytes)
+                if fast_overall:
+                    root_species = cached_classify_root_species_fast(root_image_bytes)
+                else:
+                    root_species = cached_classify_root_species(root_image_bytes)
+            except ValueError as ve:
+                analysis_error = str(ve)
+            except Exception as e:
+                analysis_error = str(e)
+        
         skeleton_placeholder.empty()
+        
+        # If analysis failed, show invalid root image error
+        if analysis_error or root_report is None:
+            st.error("❌ **Invalid Root Image Detected**")
+            st.markdown(f"""
+            <div style="background: #1c1c1e; border: 2px solid #ff3b30; border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
+                <h4 style="color: #ff3b30; margin: 0 0 0.5rem 0;">⚠️ This doesn't appear to be a root image</h4>
+                <p style="color: #f5f5f7; margin: 0 0 0.5rem 0;"><strong>Reason:</strong> {analysis_error or 'No root structure could be detected.'}</p>
+                <p style="color: #f5f5f7; margin: 0;">Please upload a clear photo of <strong>plant roots</strong> for accurate analysis.</p>
+                <ul style="color: #a1a1a6; margin: 0.5rem 0 0 1rem;">
+                    <li>Use a well-lit, focused image of the root system</li>
+                    <li>Ensure the roots are clearly visible against a contrasting background</li>
+                    <li>Avoid blurry, dark, or non-root images</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            st.stop()
         
         # Check if the image is actually a root based on species classification AND extracted features
         detected_root_species = root_species.get("species", "").strip().lower()
