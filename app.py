@@ -1576,27 +1576,27 @@ if root_image_file:
         skel_pcts = root_report.get("skeleton_diameter_percentiles", {})
         with st.expander("📐 Diameter Percentiles (D10–D90)"):
             st.table([
-                {"Trait": "D10", "Value": str(diameter_pcts.get("D10", 0.0) or "-")},
-                {"Trait": "D20", "Value": str(diameter_pcts.get("D20", 0.0) or "-")},
-                {"Trait": "D30", "Value": str(diameter_pcts.get("D30", 0.0) or "-")},
-                {"Trait": "D40", "Value": str(diameter_pcts.get("D40", 0.0) or "-")},
-                {"Trait": "D50", "Value": str(diameter_pcts.get("D50", 0.0) or "-")},
-                {"Trait": "D60", "Value": str(diameter_pcts.get("D60", 0.0) or "-")},
-                {"Trait": "D70", "Value": str(diameter_pcts.get("D70", 0.0) or "-")},
-                {"Trait": "D80", "Value": str(diameter_pcts.get("D80", 0.0) or "-")},
-                {"Trait": "D90", "Value": str(diameter_pcts.get("D90", 0.0) or "-")}
+                {"Trait": "D10", "Value": str(diameter_pcts.get("D10") if diameter_pcts.get("D10") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "D20", "Value": str(diameter_pcts.get("D20") if diameter_pcts.get("D20") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "D30", "Value": str(diameter_pcts.get("D30") if diameter_pcts.get("D30") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "D40", "Value": str(diameter_pcts.get("D40") if diameter_pcts.get("D40") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "D50", "Value": str(diameter_pcts.get("D50") if diameter_pcts.get("D50") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "D60", "Value": str(diameter_pcts.get("D60") if diameter_pcts.get("D60") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "D70", "Value": str(diameter_pcts.get("D70") if diameter_pcts.get("D70") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "D80", "Value": str(diameter_pcts.get("D80") if diameter_pcts.get("D80") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "D90", "Value": str(diameter_pcts.get("D90") if diameter_pcts.get("D90") not in [None, "", 0, 0.0] else "-")}
             ])
 
             st.table([
-                {"Trait": "DS10", "Value": str(skel_pcts.get("DS10", 0.0) or "-")},
-                {"Trait": "DS20", "Value": str(skel_pcts.get("DS20", 0.0) or "-")},
-                {"Trait": "DS30", "Value": str(skel_pcts.get("DS30", 0.0) or "-")},
-                {"Trait": "DS40", "Value": str(skel_pcts.get("DS40", 0.0) or "-")},
-                {"Trait": "DS50", "Value": str(skel_pcts.get("DS50", 0.0) or "-")},
-                {"Trait": "DS60", "Value": str(skel_pcts.get("DS60", 0.0) or "-")},
-                {"Trait": "DS70", "Value": str(skel_pcts.get("DS70", 0.0) or "-")},
-                {"Trait": "DS80", "Value": str(skel_pcts.get("DS80", 0.0) or "-")},
-                {"Trait": "DS90", "Value": str(skel_pcts.get("DS90", 0.0) or "-")}
+                {"Trait": "DS10", "Value": str(skel_pcts.get("DS10") if skel_pcts.get("DS10") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "DS20", "Value": str(skel_pcts.get("DS20") if skel_pcts.get("DS20") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "DS30", "Value": str(skel_pcts.get("DS30") if skel_pcts.get("DS30") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "DS40", "Value": str(skel_pcts.get("DS40") if skel_pcts.get("DS40") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "DS50", "Value": str(skel_pcts.get("DS50") if skel_pcts.get("DS50") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "DS60", "Value": str(skel_pcts.get("DS60") if skel_pcts.get("DS60") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "DS70", "Value": str(skel_pcts.get("DS70") if skel_pcts.get("DS70") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "DS80", "Value": str(skel_pcts.get("DS80") if skel_pcts.get("DS80") not in [None, "", 0, 0.0] else "-")},
+                {"Trait": "DS90", "Value": str(skel_pcts.get("DS90") if skel_pcts.get("DS90") not in [None, "", 0, 0.0] else "-")}
             ])
 
         with st.expander("🌱 Structural Counts & Diameters"):
