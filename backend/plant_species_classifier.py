@@ -42,12 +42,26 @@ def _llm_classify_species(image_path, focus="plant"):
 
     image_b64 = _encode_image_base64(image_path)
     
-    prompt = (
-        f"Identify the most likely {focus} species based on this image. "
-        f"Focus on identifying the {focus} type/species. "
-        "Return ONLY valid JSON with keys: species (string), confidence (0-1 float). "
-        "Example: {\"species\": \"Vetiver Grass\", \"confidence\": 0.85}"
-    )
+    if focus == "plant":
+        prompt = (
+            "Analyze this image carefully. First determine if this image contains a plant. "
+            "If the image does NOT contain a plant (e.g., it shows a person, animal, object, building, food, or anything non-plant), "
+            "return: {\"species\": \"Not a plant\", \"confidence\": 0.0} "
+            "If it IS a plant image, identify the most likely plant species. "
+            "Return ONLY valid JSON with keys: species (string), confidence (0-1 float). "
+            "Example for plant: {\"species\": \"Vetiver Grass\", \"confidence\": 0.85} "
+            "Example for non-plant: {\"species\": \"Not a plant\", \"confidence\": 0.0}"
+        )
+    else:  # focus == "root"
+        prompt = (
+            "Analyze this image carefully. First determine if this image shows plant roots. "
+            "If the image does NOT contain plant roots (e.g., it shows a person, animal, object, leaves only, flowers, or anything that is not a root system), "
+            "return: {\"species\": \"Not a root\", \"confidence\": 0.0} "
+            "If it IS a root image, identify the most likely root type/species. "
+            "Return ONLY valid JSON with keys: species (string), confidence (0-1 float). "
+            "Example for root: {\"species\": \"Vetiver Root\", \"confidence\": 0.85} "
+            "Example for non-root: {\"species\": \"Not a root\", \"confidence\": 0.0}"
+        )
     
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {

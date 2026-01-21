@@ -1036,145 +1036,129 @@ def _build_pdf_report(title, sections):
 
 def _safe_pdf_text(value, max_len=100):
     """Safely convert value to PDF-compatible text with length limit"""
-    text = str(value)
-    # Truncate very long text to prevent horizontal overflow
-    if len(text) > max_len:
-        text = text[:max_len] + "..."
-    return text.encode("latin-1", "replace").decode("latin-1")
+    try:
+        text = str(value) if value is not None else ""
+        # Remove any problematic characters
+        text = text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+        # Truncate very long text to prevent horizontal overflow
+        if len(text) > max_len:
+            text = text[:max_len] + "..."
+        # Ensure text is not empty (FPDF can fail on empty strings in some cases)
+        if not text.strip():
+            text = "-"
+        return text.encode("latin-1", "replace").decode("latin-1")
+    except Exception:
+        return "-"
 
 
 def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, filename_hint="root_image.png"):
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    pdf.set_left_margin(15)
-    pdf.set_right_margin(15)
-    
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "SmartRoot-AI Root Image Report", ln=True)
-
-    pdf.set_font("Arial", size=11)
-    species = _safe_pdf_text(root_species.get('species', 'Unknown'), max_len=60)
-    conf_text = _safe_pdf_text(f"{root_species.get('confidence', 0.0):.0%}", max_len=20)
-    pdf.cell(0, 6, f"Root Species: {species}", ln=True)
-    pdf.cell(0, 6, f"Species Confidence: {conf_text}", ln=True)
-    pdf.ln(2)
-
-    image_tmp = tempfile.NamedTemporaryFile(delete=False, suffix="_root_upload.png")
+    """Build PDF report for root image analysis with robust error handling"""
     try:
-        img = Image.open(io.BytesIO(root_image_bytes))
-        if img.mode not in ("RGB", "L"):
-            img = img.convert("RGB")
-        img.save(image_tmp.name, format="PNG")
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, "Uploaded Root Image", ln=True)
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+        pdf.set_left_margin(20)
+        pdf.set_right_margin(20)
+    
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(0, 10, "SmartRoot-AI Root Image Report", ln=True)
+
+        pdf.set_font("Arial", size=11)
+        species = _safe_pdf_text(root_species.get('species', 'Unknown'), max_len=50)
+        conf_text = _safe_pdf_text(f"{root_species.get('confidence', 0.0):.0%}", max_len=20)
+        pdf.cell(0, 6, f"Root Species: {species}", ln=True)
+        pdf.cell(0, 6, f"Species Confidence: {conf_text}", ln=True)
         pdf.ln(2)
-        pdf.image(image_tmp.name, w=160)
-        pdf.ln(4)
-    except Exception as img_err:
-        pdf.set_font("Arial", size=10)
-        pdf.cell(0, 6, f"(Image could not be embedded: {str(img_err)[:50]})", ln=True)
-    finally:
-        image_tmp.close()
+
+        image_tmp = tempfile.NamedTemporaryFile(delete=False, suffix="_root_upload.png")
         try:
-            os.unlink(image_tmp.name)
-        except OSError:
-            pass
-
-    def add_section(title, rows):
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, _safe_pdf_text(title, max_len=60), ln=True)
-        pdf.set_font("Arial", size=9)
-        for key, value in rows:
-            # Use multi_cell with proper width to prevent overflow
-            safe_key = _safe_pdf_text(key, max_len=40)
-            safe_value = _safe_pdf_text(value, max_len=70)
+            img = Image.open(io.BytesIO(root_image_bytes))
+            if img.mode not in ("RGB", "L"):
+                img = img.convert("RGB")
+            img.save(image_tmp.name, format="PNG")
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 8, "Uploaded Root Image", ln=True)
+            pdf.ln(2)
+            pdf.image(image_tmp.name, w=140)
+            pdf.ln(4)
+        except Exception as img_err:
+            pdf.set_font("Arial", size=10)
+            pdf.cell(0, 6, "(Image could not be embedded)", ln=True)
+        finally:
+            image_tmp.close()
             try:
-                line_text = f"- {safe_key}: {safe_value}"
-                if len(line_text) > 0:
-                    pdf.multi_cell(0, 5, line_text)
-            except Exception:
-                pdf.multi_cell(0, 5, f"- {safe_key}: (error)")
-        pdf.ln(1)
+                os.unlink(image_tmp.name)
+            except OSError:
+                pass
 
-    summary_rows = [
-        ("Root Type", root_report.get("root_type", "")),
-        ("Health Status", root_report.get("health_status", "")),
-        ("Root Health Index", f"{root_report.get('root_health_index', 0)}/100"),
-        ("Branch Density", root_report.get("branch_density", "")),
-        ("Growth Direction", root_report.get("growth_direction", "")),
-        ("Age Estimate", root_report.get("age_estimate", "")),
-        ("Biomass", root_report.get("biomass", "")),
-        ("Soil Type", root_report.get("soil_type", "")),
-        ("Soil Compaction", root_report.get("soil_compaction", ""))
-    ]
+        def add_section(title, rows):
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 8, _safe_pdf_text(title, max_len=50), ln=True)
+            pdf.set_font("Arial", size=9)
+            for key, value in rows:
+                safe_key = _safe_pdf_text(key, max_len=30)
+                safe_value = _safe_pdf_text(value, max_len=50)
+                try:
+                    pdf.cell(0, 5, f"  {safe_key}: {safe_value}", ln=True)
+                except Exception:
+                    pdf.cell(0, 5, f"  {safe_key}: -", ln=True)
+            pdf.ln(1)
 
-    metrics_rows = [
-        ("Symmetry Index", root_report.get("symmetry_index", 0.0)),
-        ("Water Efficiency", f"{root_report.get('water_efficiency', 0)}%"),
-        ("Nutrient Efficiency", f"{root_report.get('nutrient_efficiency', 0)}%"),
-        ("Branch Points", root_report.get("branch_points", 0)),
-        ("End Points", root_report.get("end_points", 0)),
-        ("Branching Factor", root_report.get("branching_factor", 0.0)),
-        ("Root Density", root_report.get("root_density", 0.0)),
-        ("Root Length Index", root_report.get("root_length_index", 0.0)),
-        ("Avg Thickness", root_report.get("avg_thickness", 0.0)),
-        ("Thickness Variation", root_report.get("thickness_variation", 0.0)),
-        ("Root Area", root_report.get("root_area", 0)),
-        ("Avg Root Density", root_report.get("avg_root_density", 0.0)),
-        ("Root System Depth", root_report.get("root_system_depth", 0)),
-        ("Root System Width", root_report.get("root_system_width", 0)),
-        ("Skeleton Depth", root_report.get("skeleton_depth", 0)),
-        ("Skeleton Width", root_report.get("skeleton_width", 0)),
-        ("Root Distribution X", root_report.get("root_distribution_x", 0.0)),
-        ("Root Distribution Y", root_report.get("root_distribution_y", 0.0)),
-        ("Root Tip Count", root_report.get("root_tip_count", 0)),
-        ("Top Angle", root_report.get("top_angle", 0.0)),
-        ("Bottom Angle", root_report.get("bottom_angle", 0.0)),
-        ("Angle Mean", root_report.get("angle_mean", 0.0)),
-        ("Angle Min", root_report.get("angle_min", 0.0)),
-        ("Angle Max", root_report.get("angle_max", 0.0)),
-        ("Adventitious Count", root_report.get("adventitious_count", 0)),
-        ("Basal Count", root_report.get("basal_count", 0)),
-        ("Adventitious Angle", root_report.get("adventitious_angle", 0.0)),
-        ("Basal Angle", root_report.get("basal_angle", 0.0)),
-        ("Taproot Diameter", root_report.get("taproot_diameter", 0.0)),
-        ("Hypocotyl Diameter", root_report.get("hypocotyl_diameter", 0.0)),
-        ("Crown Projection 25%", root_report.get("cp_dia25", 0)),
-        ("Crown Projection 50%", root_report.get("cp_dia50", 0)),
-        ("Crown Projection 75%", root_report.get("cp_dia75", 0)),
-        ("Crown Projection 90%", root_report.get("cp_dia90", 0)),
-        ("Nodal Length", root_report.get("nodal_length", 0.0)),
-        ("Nodal Avg Diameter", root_report.get("nodal_avg_diameter", 0.0)),
-        ("Lateral Branch Freq", root_report.get("lateral_branch_freq", 0.0)),
-        ("Lateral Avg Length", root_report.get("lateral_avg_length", 0.0)),
-        ("Lateral Angle Mean", root_report.get("lateral_angle_mean", 0.0)),
-        ("Lateral Angle Min", root_report.get("lateral_angle_min", 0.0)),
-        ("Lateral Angle Max", root_report.get("lateral_angle_max", 0.0))
-    ]
+        summary_rows = [
+            ("Root Type", root_report.get("root_type", "-")),
+            ("Health Status", root_report.get("health_status", "-")),
+            ("Root Health Index", f"{root_report.get('root_health_index', 0)}/100"),
+            ("Branch Density", root_report.get("branch_density", "-")),
+            ("Growth Direction", root_report.get("growth_direction", "-")),
+            ("Age Estimate", root_report.get("age_estimate", "-")),
+            ("Biomass", root_report.get("biomass", "-")),
+            ("Soil Type", root_report.get("soil_type", "-")),
+            ("Soil Compaction", root_report.get("soil_compaction", "-"))
+        ]
 
-    disease = root_report.get("disease_risk", {})
-    disease_rows = [
-        ("Root Rot Risk", disease.get("root_rot", "")),
-        ("Fungal Risk", disease.get("fungal", "")),
-        ("Damage Risk", disease.get("damage", ""))
-    ]
+        metrics_rows = [
+            ("Symmetry Index", str(root_report.get("symmetry_index", 0.0))),
+            ("Water Efficiency", f"{root_report.get('water_efficiency', 0)}%"),
+            ("Nutrient Efficiency", f"{root_report.get('nutrient_efficiency', 0)}%"),
+            ("Branch Points", str(root_report.get("branch_points", 0))),
+            ("End Points", str(root_report.get("end_points", 0))),
+            ("Branching Factor", str(root_report.get("branching_factor", 0.0))),
+            ("Root Density", str(root_report.get("root_density", 0.0))),
+            ("Root Length Index", str(root_report.get("root_length_index", 0.0))),
+            ("Avg Thickness", str(root_report.get("avg_thickness", 0.0))),
+            ("Root Area", str(root_report.get("root_area", 0))),
+            ("Root Tip Count", str(root_report.get("root_tip_count", 0)))
+        ]
 
-    diameter_pcts = root_report.get("diameter_percentiles", {})
-    skel_pcts = root_report.get("skeleton_diameter_percentiles", {})
-    diameter_rows = [(f"D{p}", diameter_pcts.get(f"D{p}", 0.0)) for p in [10, 20, 30, 40, 50, 60, 70, 80, 90]]
-    skel_rows = [(f"DS{p}", skel_pcts.get(f"DS{p}", 0.0)) for p in [10, 20, 30, 40, 50, 60, 70, 80, 90]]
+        disease = root_report.get("disease_risk", {})
+        disease_rows = [
+            ("Root Rot Risk", disease.get("root_rot", "-")),
+            ("Fungal Risk", disease.get("fungal", "-")),
+            ("Damage Risk", disease.get("damage", "-"))
+        ]
 
-    full_kv_rows = [(k, json.dumps(v, default=str)[:80] + "..." if isinstance(v, (dict, list)) and len(json.dumps(v, default=str)) > 80 else (json.dumps(v, default=str) if isinstance(v, (dict, list)) else v)) for k, v in sorted(root_report.items())]
+        add_section("Summary", summary_rows)
+        add_section("Key Metrics", metrics_rows)
+        add_section("Disease Risk", disease_rows)
 
-    add_section("Summary", summary_rows)
-    add_section("Metrics", metrics_rows)
-    add_section("Disease Risk", disease_rows)
-    add_section("Diameter Percentiles", diameter_rows)
-    add_section("Skeleton Diameter Percentiles", skel_rows)
-    add_section("Full Root Report (All Keys)", full_kv_rows)
-
-    return pdf.output(dest="S").encode("latin-1")
+        return pdf.output(dest="S").encode("latin-1")
+        
+    except Exception as pdf_err:
+        # Fallback: generate a minimal PDF if full generation fails
+        try:
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_left_margin(25)
+            pdf.set_right_margin(25)
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(0, 10, "SmartRoot-AI Root Report", ln=True)
+            pdf.set_font("Arial", size=10)
+            pdf.cell(0, 8, f"Species: {_safe_pdf_text(root_species.get('species', 'Unknown'), 40)}", ln=True)
+            pdf.cell(0, 8, f"Health Index: {root_report.get('root_health_index', 0)}/100", ln=True)
+            pdf.cell(0, 8, f"Root Type: {_safe_pdf_text(root_report.get('root_type', 'Unknown'), 40)}", ln=True)
+            return pdf.output(dest="S").encode("latin-1")
+        except Exception:
+            raise pdf_err
 
 # -------------------------------------------------
 # HEADER
@@ -1494,6 +1478,36 @@ if root_image_file and root_image_valid:
                 root_species = cached_classify_root_species(root_image_bytes)
         skeleton_placeholder.empty()
         
+        # Check if the image is actually a root
+        detected_root_species = root_species.get("species", "").strip().lower()
+        root_species_confidence = root_species.get("confidence", 0.0)
+        
+        # List of explicit non-root indicators (only reject if clearly NOT a root)
+        non_root_keywords = ["not a root", "non-root", "not root", "no root",
+                             "human", "person", "animal", "dog", "cat", "bird",
+                             "building", "car", "vehicle", "food", "face"]
+        
+        is_valid_root = True
+        for keyword in non_root_keywords:
+            if keyword in detected_root_species:
+                is_valid_root = False
+                break
+        
+        if not is_valid_root:
+            st.error("❌ **Invalid Root Image Detected**")
+            st.markdown("""
+            <div style="background: #1c1c1e; border: 2px solid #ff3b30; border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
+                <h4 style="color: #ff3b30; margin: 0 0 0.5rem 0;">⚠️ This doesn't appear to be a root image</h4>
+                <p style="color: #f5f5f7; margin: 0;">Please upload a clear photo of <strong>plant roots</strong> for accurate analysis.</p>
+                <ul style="color: #a1a1a6; margin: 0.5rem 0 0 1rem;">
+                    <li>Use a well-lit, focused image of the root system</li>
+                    <li>Ensure the roots are clearly visible</li>
+                    <li>Avoid blurry, dark, or non-root images</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            st.stop()
+        
         # Update progress step and dashboard stats
         st.session_state.current_step = 1
         root_health = root_report.get('root_health_index', 50)
@@ -1719,6 +1733,42 @@ if uploaded_file and plant_image_valid:
             species_result = cached_classify_plant_species_fast(plant_image_bytes)
         else:
             species_result = cached_classify_plant_species(plant_image_bytes)
+    
+    # Check if the image is actually a plant
+    detected_species = species_result.get("species", "").strip().lower()
+    species_confidence = species_result.get("confidence", 0.0)
+    
+    # List of non-plant indicators
+    non_plant_keywords = ["not a plant", "non-plant", "unknown", "cannot identify", "no plant", 
+                          "not plant", "invalid", "error", "unable", "unrecognized", "n/a", 
+                          "human", "person", "animal", "object", "building", "car", "food"]
+    
+    is_valid_plant = True
+    for keyword in non_plant_keywords:
+        if keyword in detected_species:
+            is_valid_plant = False
+            break
+    
+    # Also reject if confidence is too low (less than 10%)
+    if species_confidence < 0.10 and detected_species not in ["vetiver", "grass", "plant"]:
+        is_valid_plant = False
+    
+    if not is_valid_plant:
+        st.error("❌ **Invalid Plant Image Detected**")
+        st.markdown("""
+        <div style="background: #1c1c1e; border: 2px solid #ff3b30; border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
+            <h4 style="color: #ff3b30; margin: 0 0 0.5rem 0;">⚠️ This doesn't appear to be a plant image</h4>
+            <p style="color: #f5f5f7; margin: 0;">Please upload a clear photo of a <strong>vetiver plant</strong> for accurate analysis.</p>
+            <ul style="color: #a1a1a6; margin: 0.5rem 0 0 1rem;">
+                <li>Use a well-lit, focused image</li>
+                <li>Ensure the plant is clearly visible</li>
+                <li>Avoid blurry or dark photos</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.stop()
+    
     st.subheader("🌿 Plant Species Identification")
     sp1, sp2 = st.columns(2)
     with sp1:
