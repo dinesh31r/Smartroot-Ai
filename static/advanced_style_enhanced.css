@@ -1092,20 +1092,21 @@ html, body {
 .stApp table th,
 .stApp [data-testid="stDataFrame"] th,
 [data-testid="stTable"] th {
-  background: #f5f5f7 !important;
-  color: #1d1d1f !important;
+  background: #ffffff !important;
+  color: #000000 !important;
   font-weight: 700 !important;
-  padding: 12px 16px !important;
+  padding: 10px 16px !important;
+  border-bottom: 1px solid #f0f0f0 !important;
   border-bottom: 1px solid #e5e5e5 !important;
 }
 
 .stApp table td,
 .stApp [data-testid="stDataFrame"] td,
-[data-testid="stTable"] td {
-  background: #ffffff !important;
-  color: #1d1d1f !important;
-  padding: 10px 16px !important;
-  border-bottom: 1px solid #f0f0f0 !important;
+  background: #f5f5f7 !important;
+  color: #000000 !important;
+  font-weight: 900 !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e5e5e5 !important;
 }
 
 .stApp table tr:hover td,
