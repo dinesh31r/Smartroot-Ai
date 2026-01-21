@@ -971,37 +971,51 @@ def _colorize_heatmap(map_gray):
 
 def _build_pdf_report(title, sections):
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=12)
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
+    pdf.set_left_margin(15)
+    pdf.set_right_margin(15)
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, title, ln=True)
+    pdf.cell(0, 10, _safe_pdf_text(title, max_len=60), ln=True)
     pdf.ln(2)
     pdf.set_font("Arial", size=11)
     for heading, rows in sections:
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, heading, ln=True)
-        pdf.set_font("Arial", size=10)
+        pdf.cell(0, 8, _safe_pdf_text(heading, max_len=60), ln=True)
+        pdf.set_font("Arial", size=9)
         for key, value in rows:
-            pdf.multi_cell(0, 6, f"- {key}: {value}")
+            safe_key = _safe_pdf_text(key, max_len=40)
+            safe_value = _safe_pdf_text(value, max_len=70)
+            try:
+                pdf.multi_cell(0, 5, f"- {safe_key}: {safe_value}")
+            except Exception:
+                pdf.multi_cell(0, 5, f"- {safe_key}: (error)")
         pdf.ln(1)
     return pdf.output(dest="S").encode("latin-1")
 
 
-def _safe_pdf_text(value):
+def _safe_pdf_text(value, max_len=100):
+    """Safely convert value to PDF-compatible text with length limit"""
     text = str(value)
+    # Truncate very long text to prevent horizontal overflow
+    if len(text) > max_len:
+        text = text[:max_len] + "..."
     return text.encode("latin-1", "replace").decode("latin-1")
 
 
 def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, filename_hint="root_image.png"):
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=12)
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
+    pdf.set_left_margin(15)
+    pdf.set_right_margin(15)
+    
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "SmartRoot-AI Root Image Report", ln=True)
 
     pdf.set_font("Arial", size=11)
-    species = _safe_pdf_text(root_species.get('species', ''))
-    conf_text = _safe_pdf_text(f"{root_species.get('confidence', 0.0):.0%}")
+    species = _safe_pdf_text(root_species.get('species', 'Unknown'), max_len=60)
+    conf_text = _safe_pdf_text(f"{root_species.get('confidence', 0.0):.0%}", max_len=20)
     pdf.cell(0, 6, f"Root Species: {species}", ln=True)
     pdf.cell(0, 6, f"Species Confidence: {conf_text}", ln=True)
     pdf.ln(2)
@@ -1015,8 +1029,11 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
         pdf.set_font("Arial", "B", 12)
         pdf.cell(0, 8, "Uploaded Root Image", ln=True)
         pdf.ln(2)
-        pdf.image(image_tmp.name, w=170)
+        pdf.image(image_tmp.name, w=160)
         pdf.ln(4)
+    except Exception as img_err:
+        pdf.set_font("Arial", size=10)
+        pdf.cell(0, 6, f"(Image could not be embedded: {str(img_err)[:50]})", ln=True)
     finally:
         image_tmp.close()
         try:
@@ -1026,10 +1043,18 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
 
     def add_section(title, rows):
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, _safe_pdf_text(title), ln=True)
-        pdf.set_font("Arial", size=10)
+        pdf.cell(0, 8, _safe_pdf_text(title, max_len=60), ln=True)
+        pdf.set_font("Arial", size=9)
         for key, value in rows:
-            pdf.multi_cell(0, 6, f"- { _safe_pdf_text(key) }: { _safe_pdf_text(value) }")
+            # Use multi_cell with proper width to prevent overflow
+            safe_key = _safe_pdf_text(key, max_len=40)
+            safe_value = _safe_pdf_text(value, max_len=70)
+            try:
+                line_text = f"- {safe_key}: {safe_value}"
+                if len(line_text) > 0:
+                    pdf.multi_cell(0, 5, line_text)
+            except Exception:
+                pdf.multi_cell(0, 5, f"- {safe_key}: (error)")
         pdf.ln(1)
 
     summary_rows = [
@@ -1100,7 +1125,7 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
     diameter_rows = [(f"D{p}", diameter_pcts.get(f"D{p}", 0.0)) for p in [10, 20, 30, 40, 50, 60, 70, 80, 90]]
     skel_rows = [(f"DS{p}", skel_pcts.get(f"DS{p}", 0.0)) for p in [10, 20, 30, 40, 50, 60, 70, 80, 90]]
 
-    full_kv_rows = [(k, json.dumps(v, default=str) if isinstance(v, (dict, list)) else v) for k, v in sorted(root_report.items())]
+    full_kv_rows = [(k, json.dumps(v, default=str)[:80] + "..." if isinstance(v, (dict, list)) and len(json.dumps(v, default=str)) > 80 else (json.dumps(v, default=str) if isinstance(v, (dict, list)) else v)) for k, v in sorted(root_report.items())]
 
     add_section("Summary", summary_rows)
     add_section("Metrics", metrics_rows)
