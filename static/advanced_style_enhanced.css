@@ -1072,11 +1072,46 @@ html, body {
 .stApp img,
 .stApp video,
 .stApp iframe,
-.stApp table,
 .stApp pre,
 .stApp code {
   max-width: 100% !important;
   overflow-x: auto !important;
+}
+
+/* Global table styling - dark text on white */
+.stApp table,
+.stApp [data-testid="stDataFrame"] table,
+[data-testid="stTable"] table {
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  max-width: 100% !important;
+  border: 1px solid #e5e5e5 !important;
+}
+
+.stApp table th,
+.stApp [data-testid="stDataFrame"] th,
+[data-testid="stTable"] th {
+  background: #f5f5f7 !important;
+  color: #1d1d1f !important;
+  font-weight: 700 !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e5e5e5 !important;
+}
+
+.stApp table td,
+.stApp [data-testid="stDataFrame"] td,
+[data-testid="stTable"] td {
+  background: #ffffff !important;
+  color: #1d1d1f !important;
+  padding: 10px 16px !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.stApp table tr:hover td,
+.stApp [data-testid="stDataFrame"] tr:hover td,
+[data-testid="stTable"] tr:hover td {
+  background: #f5f5f7 !important;
 }
 
 /* Fix feature grid to not cause overflow */
