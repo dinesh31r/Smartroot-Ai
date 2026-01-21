@@ -4,6 +4,7 @@ CNN-based Stress Detection with AI-Enhanced Root Architecture Visualization
 """
 
 import streamlit as st
+import pandas as pd
 import tempfile
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1539,37 +1540,41 @@ if root_image_file:
 """, unsafe_allow_html=True)
 
         st.table([
-            {"Trait": "Branch Density", "Value": str(root_report.get("branch_density", "") or "-")},
-            {"Trait": "Growth Direction", "Value": str(root_report.get("growth_direction", "") or "-")},
-            {"Trait": "Root Age", "Value": str(root_report.get("age_estimate", "") or "-")},
-            {"Trait": "Biomass", "Value": str(root_report.get("biomass", "") or "-")},
-            {"Trait": "Soil Type", "Value": str(root_report.get("soil_type", "") or "-")},
-            {"Trait": "Soil Compaction", "Value": str(root_report.get("soil_compaction", "") or "-")},
-            {"Trait": "Branch Points", "Value": str(root_report.get("branch_points", 0) or "-")},
-            {"Trait": "End Points", "Value": str(root_report.get("end_points", 0) or "-")},
-            {"Trait": "Branching Factor", "Value": str(root_report.get("branching_factor", 0.0) or "-")},
-            {"Trait": "Root Density", "Value": str(root_report.get("root_density", 0.0) or "-")},
-            {"Trait": "Root Length Index", "Value": str(root_report.get("root_length_index", 0.0) or "-")},
-            {"Trait": "Avg Thickness", "Value": str(root_report.get("avg_thickness", 0.0) or "-")},
-            {"Trait": "Thickness Variation", "Value": str(root_report.get("thickness_variation", 0.0) or "-")}
+            pd.DataFrame([
+                {"Trait": "Branch Density", "Value": str(root_report.get("branch_density", "") or "-")},
+                {"Trait": "Growth Direction", "Value": str(root_report.get("growth_direction", "") or "-")},
+                {"Trait": "Root Age", "Value": str(root_report.get("age_estimate", "") or "-")},
+                {"Trait": "Biomass", "Value": str(root_report.get("biomass", "") or "-")},
+                {"Trait": "Soil Type", "Value": str(root_report.get("soil_type", "") or "-")},
+                {"Trait": "Soil Compaction", "Value": str(root_report.get("soil_compaction", "") or "-")},
+                {"Trait": "Branch Points", "Value": str(root_report.get("branch_points", 0) or "-")},
+                {"Trait": "End Points", "Value": str(root_report.get("end_points", 0) or "-")},
+                {"Trait": "Branching Factor", "Value": str(root_report.get("branching_factor", 0.0) or "-")},
+                {"Trait": "Root Density", "Value": str(root_report.get("root_density", 0.0) or "-")},
+                {"Trait": "Root Length Index", "Value": str(root_report.get("root_length_index", 0.0) or "-")},
+                {"Trait": "Avg Thickness", "Value": str(root_report.get("avg_thickness", 0.0) or "-")},
+                {"Trait": "Thickness Variation", "Value": str(root_report.get("thickness_variation", 0.0) or "-")}
+            ])
         ])
 
         with st.expander("📊 Detailed Root Geometry (Depth/Width/Angles)"):
             st.table([
-                {"Trait": "Root Area", "Value": str(root_report.get("root_area", 0) or "-")},
-                {"Trait": "Avg Root Density", "Value": str(root_report.get("avg_root_density", 0.0) or "-")},
-                {"Trait": "Root System Depth", "Value": str(root_report.get("root_system_depth", 0) or "-")},
-                {"Trait": "Root System Width", "Value": str(root_report.get("root_system_width", 0) or "-")},
-                {"Trait": "Skeleton Depth", "Value": str(root_report.get("skeleton_depth", 0) or "-")},
-                {"Trait": "Skeleton Width", "Value": str(root_report.get("skeleton_width", 0) or "-")},
-                {"Trait": "Root Distribution X", "Value": str(root_report.get("root_distribution_x", 0.0) or "-")},
-                {"Trait": "Root Distribution Y", "Value": str(root_report.get("root_distribution_y", 0.0) or "-")},
-                {"Trait": "Root Tip Count", "Value": str(root_report.get("root_tip_count", 0) or "-")},
-                {"Trait": "Top Angle", "Value": str(root_report.get("top_angle", 0.0) or "-")},
-                {"Trait": "Bottom Angle", "Value": str(root_report.get("bottom_angle", 0.0) or "-")},
-                {"Trait": "Angle Mean", "Value": str(root_report.get("angle_mean", 0.0) or "-")},
-                {"Trait": "Angle Min", "Value": str(root_report.get("angle_min", 0.0) or "-")},
-                {"Trait": "Angle Max", "Value": str(root_report.get("angle_max", 0.0) or "-")}
+                pd.DataFrame([
+                    {"Trait": "Root Area", "Value": str(root_report.get("root_area", 0) or "-")},
+                    {"Trait": "Avg Root Density", "Value": str(root_report.get("avg_root_density", 0.0) or "-")},
+                    {"Trait": "Root System Depth", "Value": str(root_report.get("root_system_depth", 0) or "-")},
+                    {"Trait": "Root System Width", "Value": str(root_report.get("root_system_width", 0) or "-")},
+                    {"Trait": "Skeleton Depth", "Value": str(root_report.get("skeleton_depth", 0) or "-")},
+                    {"Trait": "Skeleton Width", "Value": str(root_report.get("skeleton_width", 0) or "-")},
+                    {"Trait": "Root Distribution X", "Value": str(root_report.get("root_distribution_x", 0.0) or "-")},
+                    {"Trait": "Root Distribution Y", "Value": str(root_report.get("root_distribution_y", 0.0) or "-")},
+                    {"Trait": "Root Tip Count", "Value": str(root_report.get("root_tip_count", 0) or "-")},
+                    {"Trait": "Top Angle", "Value": str(root_report.get("top_angle", 0.0) or "-")},
+                    {"Trait": "Bottom Angle", "Value": str(root_report.get("bottom_angle", 0.0) or "-")},
+                    {"Trait": "Angle Mean", "Value": str(root_report.get("angle_mean", 0.0) or "-")},
+                    {"Trait": "Angle Min", "Value": str(root_report.get("angle_min", 0.0) or "-")},
+                    {"Trait": "Angle Max", "Value": str(root_report.get("angle_max", 0.0) or "-")}
+                ])
             ])
 
         diameter_pcts = root_report.get("diameter_percentiles", {})
