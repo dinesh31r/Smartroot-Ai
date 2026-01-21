@@ -1031,9 +1031,8 @@ def _build_pdf_report(title, sections):
             except Exception:
                 pdf.multi_cell(0, 5, f"- {safe_key}: (error)")
         pdf.ln(1)
-    # FPDF2 returns bytearray, convert to bytes
-    output = pdf.output(dest="S")
-    return bytes(output) if isinstance(output, bytearray) else output.encode("latin-1") if isinstance(output, str) else output
+    # Get PDF output as bytes
+    return bytes(pdf.output(dest="S"), "latin-1")
 
 
 def _safe_pdf_text(value, max_len=100):
@@ -1143,9 +1142,8 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
         add_section("Key Metrics", metrics_rows)
         add_section("Disease Risk", disease_rows)
 
-        # FPDF2 returns bytearray, convert to bytes
-        output = pdf.output(dest="S")
-        return bytes(output) if isinstance(output, bytearray) else output.encode("latin-1") if isinstance(output, str) else output
+        # Get PDF output as bytes
+        return bytes(pdf.output(dest="S"), "latin-1")
         
     except Exception as pdf_err:
         # Fallback: generate a minimal PDF if full generation fails
@@ -1160,9 +1158,8 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
             pdf.cell(0, 8, f"Species: {_safe_pdf_text(root_species.get('species', 'Unknown'), 40)}", ln=True)
             pdf.cell(0, 8, f"Health Index: {root_report.get('root_health_index', 0)}/100", ln=True)
             pdf.cell(0, 8, f"Root Type: {_safe_pdf_text(root_report.get('root_type', 'Unknown'), 40)}", ln=True)
-            # FPDF2 returns bytearray, convert to bytes
-            output = pdf.output(dest="S")
-            return bytes(output) if isinstance(output, bytearray) else output.encode("latin-1") if isinstance(output, str) else output
+            # Get PDF output as bytes
+            return bytes(pdf.output(dest="S"), "latin-1")
         except Exception:
             raise pdf_err
 
@@ -1511,9 +1508,20 @@ if root_image_file and root_image_valid:
         
         # Also check if the image has minimal root-like features
         # A valid root image should have some detectable root structure
-        if is_valid_root and root_area < 50 and branch_points < 2 and end_points < 2 and root_density < 0.001:
+        # Use OR logic - if most features are missing, it's likely not a root
+        missing_features = 0
+        if root_area < 100:
+            missing_features += 1
+        if branch_points < 3:
+            missing_features += 1
+        if end_points < 3:
+            missing_features += 1
+        if root_density < 0.005:
+            missing_features += 1
+        
+        if is_valid_root and missing_features >= 4:
             is_valid_root = False
-            rejection_reason = "No root structure detected in the image."
+            rejection_reason = f"No root structure detected. (Area: {root_area}, Branches: {branch_points}, Endpoints: {end_points})"
         
         if not is_valid_root:
             st.error("❌ **Invalid Root Image Detected**")
