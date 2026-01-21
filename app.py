@@ -987,21 +987,25 @@ def _build_pdf_report(title, sections):
     return pdf.output(dest="S").encode("latin-1")
 
 
-def _safe_pdf_text(value):
-    text = str(value)
+def _safe_pdf_text(value, max_len=60):
+    text = str(value) if value else "-"
+    if len(text) > max_len:
+        text = text[:max_len] + "..."
     return text.encode("latin-1", "replace").decode("latin-1")
 
 
 def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, filename_hint="root_image.png"):
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=12)
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
+    pdf.set_left_margin(15)
+    pdf.set_right_margin(15)
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "SmartRoot-AI Root Image Report", ln=True)
 
     pdf.set_font("Arial", size=11)
-    species = _safe_pdf_text(root_species.get('species', ''))
-    conf_text = _safe_pdf_text(f"{root_species.get('confidence', 0.0):.0%}")
+    species = _safe_pdf_text(root_species.get('species', 'Unknown'), 40)
+    conf_text = _safe_pdf_text(f"{root_species.get('confidence', 0.0):.0%}", 20)
     pdf.cell(0, 6, f"Root Species: {species}", ln=True)
     pdf.cell(0, 6, f"Species Confidence: {conf_text}", ln=True)
     pdf.ln(2)
@@ -1015,8 +1019,10 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
         pdf.set_font("Arial", "B", 12)
         pdf.cell(0, 8, "Uploaded Root Image", ln=True)
         pdf.ln(2)
-        pdf.image(image_tmp.name, w=170)
+        pdf.image(image_tmp.name, w=150)
         pdf.ln(4)
+    except:
+        pass
     finally:
         image_tmp.close()
         try:
@@ -1025,23 +1031,24 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
             pass
 
     def add_section(title, rows):
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, _safe_pdf_text(title), ln=True)
-        pdf.set_font("Arial", size=10)
+        pdf.set_font("Arial", "B", 11)
+        pdf.cell(0, 7, _safe_pdf_text(title, 40), ln=True)
+        pdf.set_font("Arial", size=9)
         for key, value in rows:
-            pdf.multi_cell(0, 6, f"- { _safe_pdf_text(key) }: { _safe_pdf_text(value) }")
+            line = f"  {_safe_pdf_text(key, 25)}: {_safe_pdf_text(value, 35)}"
+            pdf.cell(0, 5, line, ln=True)
         pdf.ln(1)
 
     summary_rows = [
-        ("Root Type", root_report.get("root_type", "")),
-        ("Health Status", root_report.get("health_status", "")),
+        ("Root Type", root_report.get("root_type", "-")),
+        ("Health Status", root_report.get("health_status", "-")),
         ("Root Health Index", f"{root_report.get('root_health_index', 0)}/100"),
-        ("Branch Density", root_report.get("branch_density", "")),
-        ("Growth Direction", root_report.get("growth_direction", "")),
-        ("Age Estimate", root_report.get("age_estimate", "")),
-        ("Biomass", root_report.get("biomass", "")),
-        ("Soil Type", root_report.get("soil_type", "")),
-        ("Soil Compaction", root_report.get("soil_compaction", ""))
+        ("Branch Density", root_report.get("branch_density", "-")),
+        ("Growth Direction", root_report.get("growth_direction", "-")),
+        ("Age Estimate", root_report.get("age_estimate", "-")),
+        ("Biomass", root_report.get("biomass", "-")),
+        ("Soil Type", root_report.get("soil_type", "-")),
+        ("Soil Compaction", root_report.get("soil_compaction", "-"))
     ]
 
     metrics_rows = [
