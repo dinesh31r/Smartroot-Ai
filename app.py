@@ -1031,7 +1031,10 @@ def _build_pdf_report(title, sections):
             safe_value = _safe_pdf_text(value, max_len=40)
             pdf.cell(0, 5, f"  {safe_key}: {safe_value}", ln=True)
         pdf.ln(1)
-    return bytes(pdf.output(dest="S"), "latin-1")
+    output = pdf.output(dest="S")
+    if isinstance(output, bytes):
+        return output
+    return output.encode("latin-1")
 
 
 def _safe_pdf_text(value, max_len=100):
@@ -1141,8 +1144,10 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
         add_section("Key Metrics", metrics_rows)
         add_section("Disease Risk", disease_rows)
 
-        # Get PDF output as bytes
-        return bytes(pdf.output(dest="S"), "latin-1")
+        output = pdf.output(dest="S")
+        if isinstance(output, bytes):
+            return output
+        return output.encode("latin-1")
         
     except Exception as pdf_err:
         # Fallback: generate a minimal PDF if full generation fails
@@ -1157,8 +1162,10 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
             pdf.cell(0, 8, f"Species: {_safe_pdf_text(root_species.get('species', 'Unknown'), 40)}", ln=True)
             pdf.cell(0, 8, f"Health Index: {root_report.get('root_health_index', 0)}/100", ln=True)
             pdf.cell(0, 8, f"Root Type: {_safe_pdf_text(root_report.get('root_type', 'Unknown'), 40)}", ln=True)
-            # Get PDF output as bytes
-            return bytes(pdf.output(dest="S"), "latin-1")
+            output = pdf.output(dest="S")
+            if isinstance(output, bytes):
+                return output
+            return output.encode("latin-1")
         except Exception:
             raise pdf_err
 
