@@ -936,7 +936,9 @@ def cached_analyze_root_image(file_bytes):
     if cached is not None:
         return cached
     image_path = _bytes_to_temp_file(file_bytes)
-    return _cache_set(key, analyze_root_image(image_path))
+    # Don't cache errors - let them propagate
+    result = analyze_root_image(image_path)
+    return _cache_set(key, result)
 
 
 @st.cache_data(show_spinner=False)
@@ -946,7 +948,9 @@ def cached_analyze_root_image_fast(file_bytes):
     if cached is not None:
         return cached
     image_path = _bytes_to_temp_file(file_bytes)
-    return _cache_set(key, analyze_root_image(image_path, fast=True))
+    # Don't cache errors - let them propagate
+    result = analyze_root_image(image_path, fast=True)
+    return _cache_set(key, result)
 
 
 
@@ -1471,102 +1475,54 @@ if root_image_file and root_image_valid:
             unsafe_allow_html=True
         )
         
-        # Try to analyze root image - may fail if image doesn't contain roots
-        root_report = None
-        root_species = None
-        analysis_error = None
-        
+        # First classify the root species using LLM
         with st.spinner("Analyzing root image..."):
-            try:
-                if fast_root_analysis:
-                    root_report = cached_analyze_root_image_fast(root_image_bytes)
-                else:
-                    root_report = cached_analyze_root_image(root_image_bytes)
-                if fast_overall:
-                    root_species = cached_classify_root_species_fast(root_image_bytes)
-                else:
-                    root_species = cached_classify_root_species(root_image_bytes)
-            except ValueError as ve:
-                analysis_error = str(ve)
-            except Exception as e:
-                analysis_error = str(e)
+            if fast_overall:
+                root_species = cached_classify_root_species_fast(root_image_bytes)
+            else:
+                root_species = cached_classify_root_species(root_image_bytes)
         
-        skeleton_placeholder.empty()
-        
-        # If analysis failed, show invalid root image error
-        if analysis_error or root_report is None:
-            st.error("❌ **Invalid Root Image Detected**")
-            st.markdown(f"""
-            <div style="background: #1c1c1e; border: 2px solid #ff3b30; border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
-                <h4 style="color: #ff3b30; margin: 0 0 0.5rem 0;">⚠️ This doesn't appear to be a root image</h4>
-                <p style="color: #f5f5f7; margin: 0 0 0.5rem 0;"><strong>Reason:</strong> {analysis_error or 'No root structure could be detected.'}</p>
-                <p style="color: #f5f5f7; margin: 0;">Please upload a clear photo of <strong>plant roots</strong> for accurate analysis.</p>
-                <ul style="color: #a1a1a6; margin: 0.5rem 0 0 1rem;">
-                    <li>Use a well-lit, focused image of the root system</li>
-                    <li>Ensure the roots are clearly visible against a contrasting background</li>
-                    <li>Avoid blurry, dark, or non-root images</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-            st.stop()
-        
-        # Check if the image is actually a root based on species classification AND extracted features
+        # Check if the image is actually a root (same approach as plant validation)
         detected_root_species = root_species.get("species", "").strip().lower()
         root_species_confidence = root_species.get("confidence", 0.0)
         
-        # Check extracted root features - valid roots should have some structure
-        root_area = root_report.get("root_area", 0)
-        branch_points = root_report.get("branch_points", 0)
-        end_points = root_report.get("end_points", 0)
-        root_density = root_report.get("root_density", 0.0)
-        
-        # List of explicit non-root indicators from LLM
+        # List of non-root indicators
         non_root_keywords = ["not a root", "non-root", "not root", "no root",
-                             "human", "person", "animal", "dog", "cat", "bird",
-                             "building", "car", "vehicle", "food", "face"]
+                             "human", "person", "animal", "object", "building", "car", "food"]
         
         is_valid_root = True
-        rejection_reason = ""
-        
-        # Check if LLM explicitly says it's not a root
         for keyword in non_root_keywords:
             if keyword in detected_root_species:
                 is_valid_root = False
-                rejection_reason = "The AI detected this is not a root image."
                 break
         
-        # Also check if the image has minimal root-like features
-        # A valid root image should have some detectable root structure
-        # Use OR logic - if most features are missing, it's likely not a root
-        missing_features = 0
-        if root_area < 100:
-            missing_features += 1
-        if branch_points < 3:
-            missing_features += 1
-        if end_points < 3:
-            missing_features += 1
-        if root_density < 0.005:
-            missing_features += 1
-        
-        if is_valid_root and missing_features >= 4:
+        # Also reject if confidence is too low
+        if root_species_confidence < 0.10 and detected_root_species not in ["vetiver", "root", "fibrous", "taproot"]:
             is_valid_root = False
-            rejection_reason = f"No root structure detected. (Area: {root_area}, Branches: {branch_points}, Endpoints: {end_points})"
+        
+        skeleton_placeholder.empty()
         
         if not is_valid_root:
             st.error("❌ **Invalid Root Image Detected**")
-            st.markdown(f"""
+            st.markdown("""
             <div style="background: #1c1c1e; border: 2px solid #ff3b30; border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
                 <h4 style="color: #ff3b30; margin: 0 0 0.5rem 0;">⚠️ This doesn't appear to be a root image</h4>
-                <p style="color: #f5f5f7; margin: 0 0 0.5rem 0;"><strong>Reason:</strong> {rejection_reason}</p>
                 <p style="color: #f5f5f7; margin: 0;">Please upload a clear photo of <strong>plant roots</strong> for accurate analysis.</p>
                 <ul style="color: #a1a1a6; margin: 0.5rem 0 0 1rem;">
                     <li>Use a well-lit, focused image of the root system</li>
-                    <li>Ensure the roots are clearly visible against a contrasting background</li>
+                    <li>Ensure the roots are clearly visible</li>
                     <li>Avoid blurry, dark, or non-root images</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
             st.stop()
+        
+        # Now analyze the root image (only if valid)
+        with st.spinner("Extracting root traits..."):
+            if fast_root_analysis:
+                root_report = cached_analyze_root_image_fast(root_image_bytes)
+            else:
+                root_report = cached_analyze_root_image(root_image_bytes)
         
         # Update progress step and dashboard stats
         st.session_state.current_step = 1
