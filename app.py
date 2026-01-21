@@ -984,7 +984,8 @@ def _build_pdf_report(title, sections):
         for key, value in rows:
             pdf.multi_cell(0, 6, f"- {key}: {value}")
         pdf.ln(1)
-    return pdf.output(dest="S").encode("latin-1")
+    out = pdf.output(dest="S")
+    return out if isinstance(out, bytes) else out.encode("latin-1")
 
 
 def _safe_pdf_text(value, max_len=60):
@@ -1116,7 +1117,8 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
     add_section("Skeleton Diameter Percentiles", skel_rows)
     add_section("Full Root Report (All Keys)", full_kv_rows)
 
-    return pdf.output(dest="S").encode("latin-1")
+    out = pdf.output(dest="S")
+    return out if isinstance(out, bytes) else out.encode("latin-1")
 
 # -------------------------------------------------
 # HEADER
