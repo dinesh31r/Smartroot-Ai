@@ -1539,89 +1539,89 @@ if root_image_file:
 """, unsafe_allow_html=True)
 
         st.table([
-            {"Trait": "Branch Density", "Value": str(root_report.get("branch_density", ""))},
-            {"Trait": "Growth Direction", "Value": str(root_report.get("growth_direction", ""))},
-            {"Trait": "Root Age", "Value": str(root_report.get("age_estimate", ""))},
-            {"Trait": "Biomass", "Value": str(root_report.get("biomass", ""))},
-            {"Trait": "Soil Type", "Value": str(root_report.get("soil_type", ""))},
-            {"Trait": "Soil Compaction", "Value": str(root_report.get("soil_compaction", ""))},
-            {"Trait": "Branch Points", "Value": str(root_report.get("branch_points", 0))},
-            {"Trait": "End Points", "Value": str(root_report.get("end_points", 0))},
-            {"Trait": "Branching Factor", "Value": str(root_report.get("branching_factor", 0.0))},
-            {"Trait": "Root Density", "Value": str(root_report.get("root_density", 0.0))},
-            {"Trait": "Root Length Index", "Value": str(root_report.get("root_length_index", 0.0))},
-            {"Trait": "Avg Thickness", "Value": str(root_report.get("avg_thickness", 0.0))},
-            {"Trait": "Thickness Variation", "Value": str(root_report.get("thickness_variation", 0.0))}
+            {"Trait": "Branch Density", "Value": str(root_report.get("branch_density", "") or "-")},
+            {"Trait": "Growth Direction", "Value": str(root_report.get("growth_direction", "") or "-")},
+            {"Trait": "Root Age", "Value": str(root_report.get("age_estimate", "") or "-")},
+            {"Trait": "Biomass", "Value": str(root_report.get("biomass", "") or "-")},
+            {"Trait": "Soil Type", "Value": str(root_report.get("soil_type", "") or "-")},
+            {"Trait": "Soil Compaction", "Value": str(root_report.get("soil_compaction", "") or "-")},
+            {"Trait": "Branch Points", "Value": str(root_report.get("branch_points", 0) or "-")},
+            {"Trait": "End Points", "Value": str(root_report.get("end_points", 0) or "-")},
+            {"Trait": "Branching Factor", "Value": str(root_report.get("branching_factor", 0.0) or "-")},
+            {"Trait": "Root Density", "Value": str(root_report.get("root_density", 0.0) or "-")},
+            {"Trait": "Root Length Index", "Value": str(root_report.get("root_length_index", 0.0) or "-")},
+            {"Trait": "Avg Thickness", "Value": str(root_report.get("avg_thickness", 0.0) or "-")},
+            {"Trait": "Thickness Variation", "Value": str(root_report.get("thickness_variation", 0.0) or "-")}
         ])
 
         with st.expander("📊 Detailed Root Geometry (Depth/Width/Angles)"):
             st.table([
-                {"Trait": "Root Area", "Value": str(root_report.get("root_area", 0))},
-                {"Trait": "Avg Root Density", "Value": str(root_report.get("avg_root_density", 0.0))},
-                {"Trait": "Root System Depth", "Value": str(root_report.get("root_system_depth", 0))},
-                {"Trait": "Root System Width", "Value": str(root_report.get("root_system_width", 0))},
-                {"Trait": "Skeleton Depth", "Value": str(root_report.get("skeleton_depth", 0))},
-                {"Trait": "Skeleton Width", "Value": str(root_report.get("skeleton_width", 0))},
-                {"Trait": "Root Distribution X", "Value": str(root_report.get("root_distribution_x", 0.0))},
-                {"Trait": "Root Distribution Y", "Value": str(root_report.get("root_distribution_y", 0.0))},
-                {"Trait": "Root Tip Count", "Value": str(root_report.get("root_tip_count", 0))},
-                {"Trait": "Top Angle", "Value": str(root_report.get("top_angle", 0.0))},
-                {"Trait": "Bottom Angle", "Value": str(root_report.get("bottom_angle", 0.0))},
-                {"Trait": "Angle Mean", "Value": str(root_report.get("angle_mean", 0.0))},
-                {"Trait": "Angle Min", "Value": str(root_report.get("angle_min", 0.0))},
-                {"Trait": "Angle Max", "Value": str(root_report.get("angle_max", 0.0))}
+                {"Trait": "Root Area", "Value": str(root_report.get("root_area", 0) or "-")},
+                {"Trait": "Avg Root Density", "Value": str(root_report.get("avg_root_density", 0.0) or "-")},
+                {"Trait": "Root System Depth", "Value": str(root_report.get("root_system_depth", 0) or "-")},
+                {"Trait": "Root System Width", "Value": str(root_report.get("root_system_width", 0) or "-")},
+                {"Trait": "Skeleton Depth", "Value": str(root_report.get("skeleton_depth", 0) or "-")},
+                {"Trait": "Skeleton Width", "Value": str(root_report.get("skeleton_width", 0) or "-")},
+                {"Trait": "Root Distribution X", "Value": str(root_report.get("root_distribution_x", 0.0) or "-")},
+                {"Trait": "Root Distribution Y", "Value": str(root_report.get("root_distribution_y", 0.0) or "-")},
+                {"Trait": "Root Tip Count", "Value": str(root_report.get("root_tip_count", 0) or "-")},
+                {"Trait": "Top Angle", "Value": str(root_report.get("top_angle", 0.0) or "-")},
+                {"Trait": "Bottom Angle", "Value": str(root_report.get("bottom_angle", 0.0) or "-")},
+                {"Trait": "Angle Mean", "Value": str(root_report.get("angle_mean", 0.0) or "-")},
+                {"Trait": "Angle Min", "Value": str(root_report.get("angle_min", 0.0) or "-")},
+                {"Trait": "Angle Max", "Value": str(root_report.get("angle_max", 0.0) or "-")}
             ])
 
         diameter_pcts = root_report.get("diameter_percentiles", {})
         skel_pcts = root_report.get("skeleton_diameter_percentiles", {})
         with st.expander("📐 Diameter Percentiles (D10–D90)"):
             st.table([
-                {"Trait": "D10", "Value": str(diameter_pcts.get("D10", 0.0))},
-                {"Trait": "D20", "Value": str(diameter_pcts.get("D20", 0.0))},
-                {"Trait": "D30", "Value": str(diameter_pcts.get("D30", 0.0))},
-                {"Trait": "D40", "Value": str(diameter_pcts.get("D40", 0.0))},
-                {"Trait": "D50", "Value": str(diameter_pcts.get("D50", 0.0))},
-                {"Trait": "D60", "Value": str(diameter_pcts.get("D60", 0.0))},
-                {"Trait": "D70", "Value": str(diameter_pcts.get("D70", 0.0))},
-                {"Trait": "D80", "Value": str(diameter_pcts.get("D80", 0.0))},
-                {"Trait": "D90", "Value": str(diameter_pcts.get("D90", 0.0))}
+                {"Trait": "D10", "Value": str(diameter_pcts.get("D10", 0.0) or "-")},
+                {"Trait": "D20", "Value": str(diameter_pcts.get("D20", 0.0) or "-")},
+                {"Trait": "D30", "Value": str(diameter_pcts.get("D30", 0.0) or "-")},
+                {"Trait": "D40", "Value": str(diameter_pcts.get("D40", 0.0) or "-")},
+                {"Trait": "D50", "Value": str(diameter_pcts.get("D50", 0.0) or "-")},
+                {"Trait": "D60", "Value": str(diameter_pcts.get("D60", 0.0) or "-")},
+                {"Trait": "D70", "Value": str(diameter_pcts.get("D70", 0.0) or "-")},
+                {"Trait": "D80", "Value": str(diameter_pcts.get("D80", 0.0) or "-")},
+                {"Trait": "D90", "Value": str(diameter_pcts.get("D90", 0.0) or "-")}
             ])
 
             st.table([
-                {"Trait": "DS10", "Value": str(skel_pcts.get("DS10", 0.0))},
-                {"Trait": "DS20", "Value": str(skel_pcts.get("DS20", 0.0))},
-                {"Trait": "DS30", "Value": str(skel_pcts.get("DS30", 0.0))},
-                {"Trait": "DS40", "Value": str(skel_pcts.get("DS40", 0.0))},
-                {"Trait": "DS50", "Value": str(skel_pcts.get("DS50", 0.0))},
-                {"Trait": "DS60", "Value": str(skel_pcts.get("DS60", 0.0))},
-                {"Trait": "DS70", "Value": str(skel_pcts.get("DS70", 0.0))},
-                {"Trait": "DS80", "Value": str(skel_pcts.get("DS80", 0.0))},
-                {"Trait": "DS90", "Value": str(skel_pcts.get("DS90", 0.0))}
+                {"Trait": "DS10", "Value": str(skel_pcts.get("DS10", 0.0) or "-")},
+                {"Trait": "DS20", "Value": str(skel_pcts.get("DS20", 0.0) or "-")},
+                {"Trait": "DS30", "Value": str(skel_pcts.get("DS30", 0.0) or "-")},
+                {"Trait": "DS40", "Value": str(skel_pcts.get("DS40", 0.0) or "-")},
+                {"Trait": "DS50", "Value": str(skel_pcts.get("DS50", 0.0) or "-")},
+                {"Trait": "DS60", "Value": str(skel_pcts.get("DS60", 0.0) or "-")},
+                {"Trait": "DS70", "Value": str(skel_pcts.get("DS70", 0.0) or "-")},
+                {"Trait": "DS80", "Value": str(skel_pcts.get("DS80", 0.0) or "-")},
+                {"Trait": "DS90", "Value": str(skel_pcts.get("DS90", 0.0) or "-")}
             ])
 
         with st.expander("🌱 Structural Counts & Diameters"):
             st.table([
-                {"Trait": "Adventitious Count", "Value": str(root_report.get("adventitious_count", 0))},
-                {"Trait": "Basal Count", "Value": str(root_report.get("basal_count", 0))},
-                {"Trait": "Adventitious Angle", "Value": str(root_report.get("adventitious_angle", 0.0))},
-                {"Trait": "Basal Angle", "Value": str(root_report.get("basal_angle", 0.0))},
-                {"Trait": "Taproot Diameter", "Value": str(root_report.get("taproot_diameter", 0.0))},
-                {"Trait": "Hypocotyl Diameter", "Value": str(root_report.get("hypocotyl_diameter", 0.0))},
-                {"Trait": "Crown Projection 25%", "Value": str(root_report.get("cp_dia25", 0))},
-                {"Trait": "Crown Projection 50%", "Value": str(root_report.get("cp_dia50", 0))},
-                {"Trait": "Crown Projection 75%", "Value": str(root_report.get("cp_dia75", 0))},
-                {"Trait": "Crown Projection 90%", "Value": str(root_report.get("cp_dia90", 0))}
+                {"Trait": "Adventitious Count", "Value": str(root_report.get("adventitious_count", 0) or "-")},
+                {"Trait": "Basal Count", "Value": str(root_report.get("basal_count", 0) or "-")},
+                {"Trait": "Adventitious Angle", "Value": str(root_report.get("adventitious_angle", 0.0) or "-")},
+                {"Trait": "Basal Angle", "Value": str(root_report.get("basal_angle", 0.0) or "-")},
+                {"Trait": "Taproot Diameter", "Value": str(root_report.get("taproot_diameter", 0.0) or "-")},
+                {"Trait": "Hypocotyl Diameter", "Value": str(root_report.get("hypocotyl_diameter", 0.0) or "-")},
+                {"Trait": "Crown Projection 25%", "Value": str(root_report.get("cp_dia25", 0) or "-")},
+                {"Trait": "Crown Projection 50%", "Value": str(root_report.get("cp_dia50", 0) or "-")},
+                {"Trait": "Crown Projection 75%", "Value": str(root_report.get("cp_dia75", 0) or "-")},
+                {"Trait": "Crown Projection 90%", "Value": str(root_report.get("cp_dia90", 0) or "-")}
             ])
 
         with st.expander("🧷 Nodal & Lateral Branching"):
             st.table([
-                {"Trait": "Nodal Length", "Value": str(root_report.get("nodal_length", 0.0))},
-                {"Trait": "Nodal Avg Diameter", "Value": str(root_report.get("nodal_avg_diameter", 0.0))},
-                {"Trait": "Lateral Branch Freq", "Value": str(root_report.get("lateral_branch_freq", 0.0))},
-                {"Trait": "Lateral Avg Length", "Value": str(root_report.get("lateral_avg_length", 0.0))},
-                {"Trait": "Lateral Angle Mean", "Value": str(root_report.get("lateral_angle_mean", 0.0))},
-                {"Trait": "Lateral Angle Min", "Value": str(root_report.get("lateral_angle_min", 0.0))},
-                {"Trait": "Lateral Angle Max", "Value": str(root_report.get("lateral_angle_max", 0.0))}
+                {"Trait": "Nodal Length", "Value": str(root_report.get("nodal_length", 0.0) or "-")},
+                {"Trait": "Nodal Avg Diameter", "Value": str(root_report.get("nodal_avg_diameter", 0.0) or "-")},
+                {"Trait": "Lateral Branch Freq", "Value": str(root_report.get("lateral_branch_freq", 0.0) or "-")},
+                {"Trait": "Lateral Avg Length", "Value": str(root_report.get("lateral_avg_length", 0.0) or "-")},
+                {"Trait": "Lateral Angle Mean", "Value": str(root_report.get("lateral_angle_mean", 0.0) or "-")},
+                {"Trait": "Lateral Angle Min", "Value": str(root_report.get("lateral_angle_min", 0.0) or "-")},
+                {"Trait": "Lateral Angle Max", "Value": str(root_report.get("lateral_angle_max", 0.0) or "-")}
             ])
 
         try:
