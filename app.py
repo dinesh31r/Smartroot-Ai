@@ -994,10 +994,15 @@ def _build_pdf_report(title, sections):
             pdf.cell(0, 6, line, ln=True)
         pdf.ln(1)
     out = pdf.output(dest="S")
-    return out if isinstance(out, bytes) else out.encode("latin-1")
+    if isinstance(out, bytearray):
+        return bytes(out)
+    elif isinstance(out, bytes):
+        return out
+    else:
+        return out.encode("latin-1")
 
 
-def _safe_pdf_text(value, max_len=60):
+def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, filename_hint="root_image.png"):
     text = str(value) if value else "-"
     if len(text) > max_len:
         text = text[:max_len] + "..."
@@ -1127,7 +1132,12 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
     add_section("Full Root Report (All Keys)", full_kv_rows)
 
     out = pdf.output(dest="S")
-    return out if isinstance(out, bytes) else out.encode("latin-1")
+    if isinstance(out, bytearray):
+        return bytes(out)
+    elif isinstance(out, bytes):
+        return out
+    else:
+        return out.encode("latin-1")
 
 # -------------------------------------------------
 # HEADER
