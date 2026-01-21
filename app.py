@@ -1031,7 +1031,9 @@ def _build_pdf_report(title, sections):
             except Exception:
                 pdf.multi_cell(0, 5, f"- {safe_key}: (error)")
         pdf.ln(1)
-    return pdf.output(dest="S").encode("latin-1")
+    # FPDF2 returns bytearray, convert to bytes
+    output = pdf.output(dest="S")
+    return bytes(output) if isinstance(output, bytearray) else output.encode("latin-1") if isinstance(output, str) else output
 
 
 def _safe_pdf_text(value, max_len=100):
@@ -1141,7 +1143,9 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
         add_section("Key Metrics", metrics_rows)
         add_section("Disease Risk", disease_rows)
 
-        return pdf.output(dest="S").encode("latin-1")
+        # FPDF2 returns bytearray, convert to bytes
+        output = pdf.output(dest="S")
+        return bytes(output) if isinstance(output, bytearray) else output.encode("latin-1") if isinstance(output, str) else output
         
     except Exception as pdf_err:
         # Fallback: generate a minimal PDF if full generation fails
@@ -1156,7 +1160,9 @@ def _build_root_image_report_pdf(root_report, root_species, root_image_bytes, fi
             pdf.cell(0, 8, f"Species: {_safe_pdf_text(root_species.get('species', 'Unknown'), 40)}", ln=True)
             pdf.cell(0, 8, f"Health Index: {root_report.get('root_health_index', 0)}/100", ln=True)
             pdf.cell(0, 8, f"Root Type: {_safe_pdf_text(root_report.get('root_type', 'Unknown'), 40)}", ln=True)
-            return pdf.output(dest="S").encode("latin-1")
+            # FPDF2 returns bytearray, convert to bytes
+            output = pdf.output(dest="S")
+            return bytes(output) if isinstance(output, bytearray) else output.encode("latin-1") if isinstance(output, str) else output
         except Exception:
             raise pdf_err
 
@@ -1478,30 +1484,47 @@ if root_image_file and root_image_valid:
                 root_species = cached_classify_root_species(root_image_bytes)
         skeleton_placeholder.empty()
         
-        # Check if the image is actually a root
+        # Check if the image is actually a root based on species classification AND extracted features
         detected_root_species = root_species.get("species", "").strip().lower()
         root_species_confidence = root_species.get("confidence", 0.0)
         
-        # List of explicit non-root indicators (only reject if clearly NOT a root)
+        # Check extracted root features - valid roots should have some structure
+        root_area = root_report.get("root_area", 0)
+        branch_points = root_report.get("branch_points", 0)
+        end_points = root_report.get("end_points", 0)
+        root_density = root_report.get("root_density", 0.0)
+        
+        # List of explicit non-root indicators from LLM
         non_root_keywords = ["not a root", "non-root", "not root", "no root",
                              "human", "person", "animal", "dog", "cat", "bird",
                              "building", "car", "vehicle", "food", "face"]
         
         is_valid_root = True
+        rejection_reason = ""
+        
+        # Check if LLM explicitly says it's not a root
         for keyword in non_root_keywords:
             if keyword in detected_root_species:
                 is_valid_root = False
+                rejection_reason = "The AI detected this is not a root image."
                 break
+        
+        # Also check if the image has minimal root-like features
+        # A valid root image should have some detectable root structure
+        if is_valid_root and root_area < 50 and branch_points < 2 and end_points < 2 and root_density < 0.001:
+            is_valid_root = False
+            rejection_reason = "No root structure detected in the image."
         
         if not is_valid_root:
             st.error("❌ **Invalid Root Image Detected**")
-            st.markdown("""
+            st.markdown(f"""
             <div style="background: #1c1c1e; border: 2px solid #ff3b30; border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
                 <h4 style="color: #ff3b30; margin: 0 0 0.5rem 0;">⚠️ This doesn't appear to be a root image</h4>
+                <p style="color: #f5f5f7; margin: 0 0 0.5rem 0;"><strong>Reason:</strong> {rejection_reason}</p>
                 <p style="color: #f5f5f7; margin: 0;">Please upload a clear photo of <strong>plant roots</strong> for accurate analysis.</p>
                 <ul style="color: #a1a1a6; margin: 0.5rem 0 0 1rem;">
                     <li>Use a well-lit, focused image of the root system</li>
-                    <li>Ensure the roots are clearly visible</li>
+                    <li>Ensure the roots are clearly visible against a contrasting background</li>
                     <li>Avoid blurry, dark, or non-root images</li>
                 </ul>
             </div>
