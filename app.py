@@ -1020,22 +1020,17 @@ def _build_pdf_report(title, sections):
     pdf.set_left_margin(15)
     pdf.set_right_margin(15)
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, _safe_pdf_text(title, max_len=60), ln=True)
+    pdf.cell(0, 10, _safe_pdf_text(title, max_len=50), ln=True)
     pdf.ln(2)
-    pdf.set_font("Arial", size=11)
     for heading, rows in sections:
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, _safe_pdf_text(heading, max_len=60), ln=True)
+        pdf.set_font("Arial", "B", 11)
+        pdf.cell(0, 7, _safe_pdf_text(heading, max_len=50), ln=True)
         pdf.set_font("Arial", size=9)
         for key, value in rows:
-            safe_key = _safe_pdf_text(key, max_len=40)
-            safe_value = _safe_pdf_text(value, max_len=70)
-            try:
-                pdf.multi_cell(0, 5, f"- {safe_key}: {safe_value}")
-            except Exception:
-                pdf.multi_cell(0, 5, f"- {safe_key}: (error)")
+            safe_key = _safe_pdf_text(key, max_len=25)
+            safe_value = _safe_pdf_text(value, max_len=40)
+            pdf.cell(0, 5, f"  {safe_key}: {safe_value}", ln=True)
         pdf.ln(1)
-    # Get PDF output as bytes
     return bytes(pdf.output(dest="S"), "latin-1")
 
 
@@ -1486,8 +1481,9 @@ if root_image_file and root_image_valid:
         detected_root_species = root_species.get("species", "").strip().lower()
         root_species_confidence = root_species.get("confidence", 0.0)
         
-        # List of non-root indicators
-        non_root_keywords = ["not a root", "non-root", "not root", "no root",
+        # List of non-root indicators (same as plant validation)
+        non_root_keywords = ["not a root", "non-root", "unknown", "cannot identify", "no root", 
+                             "not root", "invalid", "error", "unable", "unrecognized", "n/a",
                              "human", "person", "animal", "object", "building", "car", "food"]
         
         is_valid_root = True
@@ -1496,7 +1492,7 @@ if root_image_file and root_image_valid:
                 is_valid_root = False
                 break
         
-        # Also reject if confidence is too low
+        # Also reject if confidence is too low (less than 10%)
         if root_species_confidence < 0.10 and detected_root_species not in ["vetiver", "root", "fibrous", "taproot"]:
             is_valid_root = False
         
