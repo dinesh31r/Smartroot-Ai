@@ -1479,22 +1479,15 @@ if root_image_file and root_image_valid:
         
         # Check if the image is actually a root (same approach as plant validation)
         detected_root_species = root_species.get("species", "").strip().lower()
-        root_species_confidence = root_species.get("confidence", 0.0)
         
-        # List of non-root indicators (same as plant validation)
-        non_root_keywords = ["not a root", "non-root", "unknown", "cannot identify", "no root", 
-                             "not root", "invalid", "error", "unable", "unrecognized", "n/a",
-                             "human", "person", "animal", "object", "building", "car", "food"]
+        # Only reject if LLM explicitly says it's not a root
+        non_root_keywords = ["not a root", "not root", "no root", "non-root"]
         
         is_valid_root = True
         for keyword in non_root_keywords:
             if keyword in detected_root_species:
                 is_valid_root = False
                 break
-        
-        # Also reject if confidence is too low (less than 10%)
-        if root_species_confidence < 0.10 and detected_root_species not in ["vetiver", "root", "fibrous", "taproot"]:
-            is_valid_root = False
         
         skeleton_placeholder.empty()
         
@@ -1748,22 +1741,15 @@ if uploaded_file and plant_image_valid:
     
     # Check if the image is actually a plant
     detected_species = species_result.get("species", "").strip().lower()
-    species_confidence = species_result.get("confidence", 0.0)
     
-    # List of non-plant indicators
-    non_plant_keywords = ["not a plant", "non-plant", "unknown", "cannot identify", "no plant", 
-                          "not plant", "invalid", "error", "unable", "unrecognized", "n/a", 
-                          "human", "person", "animal", "object", "building", "car", "food"]
+    # Only reject if LLM explicitly says it's not a plant
+    non_plant_keywords = ["not a plant", "not plant", "no plant", "non-plant"]
     
     is_valid_plant = True
     for keyword in non_plant_keywords:
         if keyword in detected_species:
             is_valid_plant = False
             break
-    
-    # Also reject if confidence is too low (less than 10%)
-    if species_confidence < 0.10 and detected_species not in ["vetiver", "grass", "plant"]:
-        is_valid_plant = False
     
     if not is_valid_plant:
         st.error("❌ **Invalid Plant Image Detected**")
