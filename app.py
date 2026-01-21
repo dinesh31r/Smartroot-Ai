@@ -969,20 +969,29 @@ def _colorize_heatmap(map_gray):
     return cv2.cvtColor(heat_bgr, cv2.COLOR_BGR2RGB)
 
 
+def _safe_pdf_text(value, max_len=60):
+    text = str(value) if value else "-"
+    if len(text) > max_len:
+        text = text[:max_len] + "..."
+    return text.encode("latin-1", "replace").decode("latin-1")
+
+
 def _build_pdf_report(title, sections):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=12)
+    pdf.set_left_margin(15)
+    pdf.set_right_margin(15)
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, title, ln=True)
+    pdf.cell(0, 10, _safe_pdf_text(title, 50), ln=True)
     pdf.ln(2)
-    pdf.set_font("Arial", size=11)
     for heading, rows in sections:
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, heading, ln=True)
+        pdf.cell(0, 8, _safe_pdf_text(heading, 40), ln=True)
         pdf.set_font("Arial", size=10)
         for key, value in rows:
-            pdf.multi_cell(0, 6, f"- {key}: {value}")
+            line = f"- {_safe_pdf_text(key, 25)}: {_safe_pdf_text(value, 50)}"
+            pdf.cell(0, 6, line, ln=True)
         pdf.ln(1)
     out = pdf.output(dest="S")
     return out if isinstance(out, bytes) else out.encode("latin-1")
