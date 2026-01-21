@@ -1427,15 +1427,10 @@ if root_image_file:
             unsafe_allow_html=True
         )
         with st.spinner("Analyzing root image..."):
-            import tempfile
-            with tempfile.NamedTemporaryFile(delete=False, suffix="_root_upload.png") as tmp_img:
-                tmp_img.write(root_image_bytes)
-                tmp_img.flush()
-                img_path = tmp_img.name
             if fast_root_analysis:
-                root_report = cached_analyze_root_image_fast(img_path)
+                root_report = cached_analyze_root_image_fast(root_image_bytes)
             else:
-                root_report = cached_analyze_root_image(img_path)
+                root_report = cached_analyze_root_image(root_image_bytes)
             if fast_overall:
                 root_species = cached_classify_root_species_fast(root_image_bytes)
             else:
