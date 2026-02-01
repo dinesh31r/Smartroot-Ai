@@ -1,10 +1,34 @@
 from backend.root_traits_extractor import extract_root_traits
 from backend.root_health_classifier import classify_root_health
 from backend.root_soil_inference import infer_soil_traits
+from backend.root_unet_segmentation import segment_root_unet
 
 
-def analyze_root_image(image_path, fast=False):
+def analyze_root_image(image_path, fast=False, use_unet=False):
     traits = extract_root_traits(image_path, fast=fast)
+
+    # OPTIONAL: U-Net Segmentation (Safe Extension)
+    if use_unet or (not traits.get("root_area") and not fast):
+        print("🧬 Attempting U-Net Segmentation...")
+        unet_metrics = segment_root_unet(image_path)
+        if unet_metrics:
+            print("✅ U-Net Segmentation Successful")
+            # Overwrite/Enhance metrics
+            if unet_metrics.get("unet_density"):
+                traits["root_density"] = float(unet_metrics["unet_density"])
+                traits["avg_root_density"] = float(unet_metrics["unet_density"]) # Sync
+            
+            # Using U-Net length for length index if available
+            if unet_metrics.get("unet_total_length_px"):
+                # Rough conversion if needed or just use as relative score
+                # Existing length index is likely 0-1 or scale based. 
+                # We'll just update if existing is 0
+                if traits.get("root_length_index", 0) == 0:
+                     traits["root_length_index"] = unet_metrics["unet_total_length_px"] / 10000.0 # Arbitrary scale safety
+
+            traits["unet_enhanced"] = True
+        else:
+            print("⚠️ U-Net skipped (model not found or failed). Using standard analysis.")
     health = classify_root_health(traits)
     soil = infer_soil_traits(traits)
 
@@ -61,5 +85,6 @@ def analyze_root_image(image_path, fast=False):
         "lateral_avg_length": round(traits.get("lateral_avg_length", 0.0), 2),
         "lateral_angle_mean": round(traits.get("lateral_angle_mean", 0.0), 1),
         "lateral_angle_min": round(traits.get("lateral_angle_min", 0.0), 1),
-        "lateral_angle_max": round(traits.get("lateral_angle_max", 0.0), 1)
+        "lateral_angle_max": round(traits.get("lateral_angle_max", 0.0), 1),
+        "unet_enhanced": traits.get("unet_enhanced", False)
     }

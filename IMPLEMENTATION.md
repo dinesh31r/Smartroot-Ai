@@ -1,293 +1,203 @@
 # SmartRoot-AI Implementation Guide
 
-> Documentation of core working features
+> Detailed technical documentation of the SmartRoot-AI architecture, algorithms, and logical flows.
 
 ---
 
 ## Table of Contents
 
-1. [Project Setup](#1-project-setup)
-2. [CNN Stress Classification](#2-cnn-stress-classification)
-3. [Root Image Analysis](#3-root-image-analysis)
-4. [Root Growth Simulation](#4-root-growth-simulation)
-5. [LLM Integration (Groq)](#5-llm-integration-groq)
-6. [Species Classification](#6-species-classification)
-7. [Database (Supabase)](#7-database-supabase)
-8. [Deployment](#8-deployment)
+1. [Project Overview & Architecture](#1-project-overview--architecture)
+2. [CNN Stress Classification (Ensemble & Fusion)](#2-cnn-stress-classification-ensemble--fusion)
+3. [Root Image Analysis (U-Net & RootNav)](#3-root-image-analysis-u-net--rootnav)
+4. [Plant Health Logic (PlantVillage)](#4-plant-health-logic-plantvillage)
+5. [Species Classification (Hybrid AI)](#5-species-classification-hybrid-ai)
+6. [LLM Integration (Groq)](#6-llm-integration-groq)
+7. [UI/UX Implementation](#7-uiux-implementation)
+8. [Database Schema](#8-database-schema)
+9. [Deployment](#9-deployment)
 
 ---
 
-## 1. Project Setup
+## 1. Project Overview & Architecture
 
-### Virtual Environment
-```bash
-python3 -m venv venv_tf
-source venv_tf/bin/activate
-```
+SmartRoot-AI is a modular, multi-modal AI application designed for agricultural analysis. It combines Deep Learning (CNNs), Computer Vision (OpenCV), and Large Language Models (LLMs) to provide a holistic view of plant and root health.
 
-### Dependencies
-```
-streamlit==1.32.0
-numpy==1.26.4
-matplotlib==3.8.3
-pillow==10.2.0
-opencv-python-headless==4.9.0.80
-python-dotenv
-fpdf2==2.7.9
-plotly==5.18.0
-supabase==2.0.0
-tensorflow
-requests
-```
+### Directory Structure
 
-### Project Structure
 ```
 smartroot_ai/
-├── app.py                 # Main Streamlit app
+├── app.py                      # Main Streamlit Application Entry Point
 ├── backend/
-│   ├── cnn_inference.py   # CNN prediction
-│   ├── root_simulator.py  # Growth simulation
-│   ├── ai_realism.py      # Realism scoring
-│   ├── llm_guidence.py    # Groq LLM calls
-│   ├── database.py        # Supabase client
-│   ├── plant_species_classifier.py
-│   ├── root_image_analyzer.py
-│   └── root_traits_extractor.py
+│   ├── cnn_inference.py        # Ensemble prediction & Sensor Fusion
+│   ├── root_unet_segmentation.py # U-Net model for root segmentation
+│   ├── rootnav_logic.py        # RootNav 2.0 structural analysis
+│   ├── plantvillage_logic.py   # Color-based health analysis
+│   ├── plant_species_classifier.py # Hybrid Species ID (LLM + CNN + CV)
+│   ├── root_image_analyzer.py  # Main root analysis orchestrator
+│   ├── root_simulator.py       # Biological growth simulation
+│   ├── ai_realism.py           # Realism scoring logic
+│   ├── llm_guidence.py         # Groq API integration (LLaMA 3.3/4)
+│   ├── database.py             # Supabase client wrapper
+│   └── ui_v3_utils.py          # UI helpers (Plotly charts, banners)
 ├── model/
-│   └── vetiver_cnn.h5     # Trained CNN model
-├── static/                # CSS files
+│   ├── vetiver_cnn.h5          # Custom trained CNN
+│   └── mobilenet_plantvillage.h5 # Pretrained MobileNetV2 (optional)
+├── static/
+│   ├── advanced_style_enhanced.css # "Apple Pro" Dark Theme
+│   ├── advanced_ui_interactions.js # JS for glassmorphism/scroll
+│   └── dashboard_components.css    # Card styling
 └── .streamlit/
-    ├── config.toml
-    └── secrets.toml
+    ├── config.toml             # Theme configuration
+    └── secrets.toml            # API Keys (Groq, Supabase)
 ```
 
 ---
 
-## 2. CNN Stress Classification
+## 2. CNN Stress Classification (Ensemble & Fusion)
 
 **File**: `backend/cnn_inference.py`
 
-Classifies Vetiver plant stress from images using a trained CNN model.
+This module manages the core plant stress detection using a dynamic model registry and sensor fusion logic.
 
-**Classes**: Healthy, Low Moisture, Low Nutrient, Stressed
+### Supported Models
+The system uses a `ModelRegistry` pattern to load models on demand:
+1.  **Default (Custom CNN)**: A lightweight 4-layer CNN (~2MB) optimized for Vetiver grass.
+2.  **ResNet50**: ImageNet-pretrained feature extractor refined for stress detection.
+3.  **EfficientNetV2-S**: High-accuracy model for complex patterns.
 
+### Ensemble Logic
+The `predict_stress_ensemble()` function averages Softmax probabilities from multiple models to reduce variance:
 ```python
-from tensorflow.keras.models import load_model
-from PIL import Image
-import numpy as np
-
-model = load_model("model/vetiver_cnn.h5")
-
-def predict_stress(image_path):
-    img = Image.open(image_path).resize((224, 224))
-    img_array = np.array(img) / 255.0
-    predictions = model.predict(np.expand_dims(img_array, 0), verbose=0)[0]
-    
-    labels = ["Healthy", "Low Moisture", "Low Nutrient", "Stressed"]
-    class_idx = np.argmax(predictions)
-    
-    return labels[class_idx], moisture, nutrient, confidence, weak_signal
+avg_pred = np.mean([pred_default, pred_resnet, pred_efficientnet], axis=0)
+confidence = np.max(avg_pred)
 ```
+
+### Sensor Fusion
+The system fuses visual predictions with environmental data (Temperature, Humidity, Soil Moisture) using the `fuse_sensor_data()` function:
+-   **Logic**: If visual confidence is low (< 0.6) OR sensor data strongly contradicts visual classification (e.g., Soil Moisture < 30% but clear leaves), the sensor data takes precedence.
+-   **Example**: `Image=Healthy` + `Moisture=20%` \u2192 `Result=Low Moisture (Augmented)`
+
+### Preprocessing Pipeline
+1.  **Background Removal**: HSV-based masking to isolate the plant.
+2.  **CLAHE**: Contrast Limited Adaptive Histogram Equalization for lighting correction.
+3.  **Resizing**: 128x128 (Default) or 224x224 (ResNet/EfficientNet).
 
 ---
 
-## 3. Root Image Analysis
+## 3. Root Image Analysis (U-Net & RootNav)
 
-**File**: `backend/root_image_analyzer.py`
+The root analysis sub-system (`backend/root_image_analyzer.py`) employs a multi-stage pipeline:
 
-Extracts morphological traits from root images using OpenCV.
+### A. U-Net Segmentation (`backend/root_unet_segmentation.py`)
+-   **Architecture**: Standard U-Net with skip connections.
+-   **Input**: 256x256 Grayscale images.
+-   **Output**: Binary mask of root structure.
+-   **Fallback**: If weights are missing, returns `None` to trigger RootNav logic.
 
-**Traits extracted**:
-- Root density (% coverage)
-- Branching count
-- Average diameter
-- Max depth/width
+### B. RootNav 2.0 Logic (`backend/rootnav_logic.py`)
+Used when U-Net is unavailable or strictly for structural feature extraction.
+-   **Segmentation**: Adaptive Gaussian Thresholding + Morphological Closing.
+-   **Feature Extraction**:
+    -   **Tips/Branches**: Skeletonization + Convolution (3x3 kernels) to find junctions.
+    -   **Convex Hull**: Calculates total root system area.
+    -   **Depth/Width**: Pixel-wise extrema.
 
-```python
-import cv2
-import numpy as np
-
-def analyze_root_image(image_path):
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    _, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY_INV)
-    contours, _ = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
-    density = (np.sum(binary > 0) / binary.size) * 100
-    return {"density": density, "branching_count": len(contours), ...}
-```
+### C. 3D Visualization
+Plotly 3D Scatter plots are generated by extruding 2D root segments into 3D space with randomized Z-jitter (`app.py`: `create_root_3d_visualization`).
 
 ---
 
-## 4. Root Growth Simulation
+## 4. Plant Health Logic (PlantVillage)
 
-**File**: `backend/root_simulator.py`
+**File**: `backend/plantvillage_logic.py`
 
-Generates biologically realistic root growth visualizations.
+A heuristic computer vision layer that mimics expert agronomy rules (PlantVillage style):
 
-**Features**:
-- Soil-aware parameters (Sandy, Clay, Loamy)
-- Recursive branching with depth control
-- Root hair generation
+-   **Chlorosis Detection**: HSV Range (Yellows) `[20, 100, 100]` to `[34, 255, 255]`.
+-   **Necrosis Detection**: HSV Range (Browns) `[10, 50, 50]` to `[20, 255, 200]`.
+-   **Scoring**:
+    -   `Nutrient Score = 100 - (Yellow_Ratio * 2)`
+    -   `Moisture Score = 100 - (Brown_Ratio * 3)`
 
-```python
-def simulate_root(soil_type="Loamy", moisture=50, nutrient=50):
-    # Returns matplotlib figure and growth metrics
-    fig, ax = plt.subplots(figsize=(10, 12), facecolor='black')
-    # ... recursive growth algorithm
-    return fig, metrics
-```
-
-**File**: `backend/ai_realism.py`
-
-Scores simulation realism (0-100) based on:
-- Depth appropriate for soil type
-- Branching density
-- Root hair distribution
-- Spread ratio
+This logic runs in parallel with CNNs to provide a "sanity check" or backup classification.
 
 ---
 
-## 5. LLM Integration (Groq)
-
-**File**: `backend/llm_guidence.py`
-
-Uses Groq API (free tier) with LLaMA 3.3 70B for AI explanations.
-
-```python
-GROQ_MODEL = "llama-3.3-70b-versatile"
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-
-def call_groq_api(prompt, max_tokens=500):
-    headers = {"Authorization": f"Bearer {api_key}"}
-    payload = {
-        "model": GROQ_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.4,
-        "max_tokens": max_tokens
-    }
-    response = requests.post(GROQ_API_URL, headers=headers, json=payload)
-    return response.json()["choices"][0]["message"]["content"]
-```
-
-**Functions**:
-- `llm_explain_plant_analysis()` - Plant health explanations
-- `llm_explain_root_analysis()` - Root analysis explanations  
-- `llm_biological_analysis()` - Biological insights
-
-**Fallback**: Rule-based explanations when API unavailable.
-
----
-
-## 6. Species Classification
+## 5. Species Classification (Hybrid AI)
 
 **File**: `backend/plant_species_classifier.py`
 
-Uses Groq Vision (LLaMA 4 Scout) for species identification.
+A robust 3-tier fallback system:
 
-```python
-def classify_plant_species(image_path):
-    image_b64 = base64.b64encode(open(image_path, "rb").read()).decode()
-    
-    payload = {
-        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
-        "messages": [{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": "Identify the plant species..."},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
-            ]
-        }]
-    }
-    # Returns {"species": "Name", "confidence": 0.85}
-```
-
-**Fallback**: OpenCV-based Vetiver detection using green color analysis and aspect ratio.
+1.  **Tier 1: Vision LLM (Llama 4 Scout)** via Groq API.
+    -   Prompt: "Identify the plant species... return JSON {species, confidence}"
+    -   Most accurate but rate-limited.
+2.  **Tier 2: MobileNetV2 (ImageNet)**.
+    -   Standard classification if LLM fails.
+3.  **Tier 3: Morphology Rules (CV)**.
+    -   Analyzes Aspect Ratio (> 2.5 implies Grass/Vetiver).
+    -   Analyzes Edge Density (High density implies fibrous roots).
 
 ---
 
-## 7. Database (Supabase)
+## 6. LLM Integration (Groq)
+
+**File**: `backend/llm_guidence.py`
+
+Leverages the Groq API for sub-second inference speeds.
+
+-   **Chat Model**: `llama-3.3-70b-versatile`
+-   **Vision Model**: `llama-4-scout-17b-16e-instruct`
+-   **Functions**:
+    -   `llm_explain_plant_analysis()`: Explain CNN results.
+    -   `llm_biological_analysis()`: Explain growth simulations.
+    -   `llm_health_check()`: General Q&A.
+
+---
+
+## 7. UI/UX Implementation
+
+**Files**: `static/advanced_style_enhanced.css`, `static/advanced_ui_interactions.js`
+
+### "Apple Pro" Design System
+-   **Color Palette**: Pure Black (`#000000`), Dark Gray (`#1c1c1e`), Apple Green (`#30d158`).
+-   **Glassmorphism**: `backdrop-filter: blur(20px)` on cards and headers.
+-   **Micro-interactions**: CSS transitions for hover states, JS driven scroll progress.
+-   **Components**: Custom implementations of Circular Progress bars and Radar Charts in `app.py`.
+
+---
+
+## 8. Database Schema
 
 **File**: `backend/database.py`
 
-PostgreSQL database for persistent storage.
+**Supabase (PostgreSQL)** Tables:
 
-**Tables**:
-- `dashboard_stats` - Aggregate statistics
-- `analysis_history` - Analysis records
-- `health_metrics` - Time-series health data
-
-```python
-from supabase import create_client
-
-def get_supabase_client():
-    url = st.secrets["supabase"]["url"]
-    key = st.secrets["supabase"]["key"]
-    return create_client(url, key)
-
-def save_analysis_to_db(analysis_type, health_score, moisture, nutrient):
-    supabase = get_supabase_client()
-    supabase.table('analysis_history').insert({...}).execute()
-```
-
-**Note**: Use `supabase==2.0.0` to avoid proxy argument error.
+1.  **dashboard_stats**: Global aggregations.
+    -   `id, total_plants, total_roots, avg_health_score`
+2.  **analysis_history**: Log of individual runs.
+    -   `id, name, health_score, analysis_type, timestamp`
+3.  **health_metrics**: Time-series data for charts.
+    -   `id, moisture, nutrient, health_score, timestamp`
 
 ---
 
-## 8. Deployment
+## 9. Deployment
 
-### Streamlit Config
-
-**`.streamlit/config.toml`**:
-```toml
-[theme]
-primaryColor = "#30d158"
-backgroundColor = "#000000"
-secondaryBackgroundColor = "#1c1c1e"
-textColor = "#f5f5f7"
-
-[server]
-headless = true
-port = 8501
-```
-
-### Secrets
-
-**`.streamlit/secrets.toml`**:
-```toml
-[supabase]
-url = "https://your-project.supabase.co"
-key = "your_anon_key"
-
-[groq]
-api_key = "gsk_your_key"
-```
-
-### Docker
-
+### Docker Configuration
 ```dockerfile
 FROM python:3.10-slim
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
+RUN pip install -r requirements.txt
 EXPOSE 8501
 CMD ["streamlit", "run", "app.py", "--server.port=8501"]
 ```
 
----
-
-## Technology Stack
-
-| Component | Technology |
-|-----------|------------|
-| Frontend | Streamlit |
-| ML Model | TensorFlow CNN |
-| Vision AI | Groq LLaMA 4 Scout |
-| Text AI | Groq LLaMA 3.3 70B |
-| Database | Supabase PostgreSQL |
-| Image Processing | OpenCV |
-| Charts | Plotly + Matplotlib |
-
----
-
-*Author: R. Dinesh | January 2026*
+### Dependencies
+-   `streamlit>=1.32.0`
+-   `tensorflow>=2.12.0`
+-   `opencv-python-headless`
+-   `plotly`
+-   `supabase`
+-   `requests` (for Groq API)

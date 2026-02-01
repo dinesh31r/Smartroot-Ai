@@ -24,12 +24,20 @@ def classify_root_health(traits):
     biomass_norm = {"Low": 0.3, "Medium": 0.6, "High": 0.9}.get(biomass_level, 0.6)
     branch_norm = min(branch_density / 0.008, 1.0)
 
+    # Vetiver roots are naturally brownish/yellow. 
+    # Reduced penalty for brown to avoid false positives on healthy roots.
+    # Dark ratio (necrosis) remains high penalty.
     penalty_sym = (1.0 - symmetry) * 18.0
-    penalty_rot = brown_ratio * 45.0 + dark_ratio * 30.0
+    penalty_rot = brown_ratio * 15.0 + dark_ratio * 40.0
     penalty_frag = fragmentation * 15.0
     penalty_thin = (1.0 - thickness_norm) * 10.0
+    
+    # NEW: Penalty for sparse/low biomass roots
+    # If biomass is low, it indicates poor growth even if not rotten.
+    biomass_score = {"Low": 0.2, "Medium": 0.8, "High": 1.0}.get(biomass_level, 0.5)
+    penalty_biomass = (1.0 - biomass_score) * 20.0
 
-    health_score = 100.0 - (penalty_sym + penalty_rot + penalty_frag + penalty_thin)
+    health_score = 100.0 - (penalty_sym + penalty_rot + penalty_frag + penalty_thin + penalty_biomass)
     health_score = int(_clamp(health_score, 0.0, 100.0))
 
     if health_score >= 75:

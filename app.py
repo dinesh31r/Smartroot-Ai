@@ -25,8 +25,9 @@ from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 
+import cv2
 from backend.llm_guidence import llm_biological_analysis, llm_health_check
-from backend.cnn_inference import predict_stress
+from backend.cnn_inference import predict_stress, predict_stress_ensemble, get_model_explanation
 from backend.root_simulator import simulate_root
 from backend.ai_realism import evaluate_root_realism
 from backend.database import (
@@ -35,11 +36,13 @@ from backend.database import (
     save_analysis_to_db,
     get_dashboard_stats,
     get_analysis_history,
-    get_health_metrics
+    get_health_metrics,
+    increment_stat
 )
 from backend.plant_species_classifier import classify_plant_species, classify_root_species
 from backend.root_image_analyzer import analyze_root_image
 from backend.llm_guidence import llm_explain_plant_analysis, llm_explain_root_analysis
+import backend.ui_v3_utils as ui_v3
 
 warnings.filterwarnings(
     "ignore",
@@ -59,6 +62,26 @@ st.set_page_config(
 # Initialize session state for theme
 if 'theme' not in st.session_state:
     st.session_state.theme = 'light'
+
+# Sidebar Header & Toggle
+st.sidebar.markdown("#  SmartRoot Pro")
+pro_mode = st.sidebar.toggle("Enable Pro UI", key="pro_mode", value=False, help="Enable mobile-friendly layout and interactive analytics.")
+
+# Sidebar Sensor Headers (Only if pro_mode is false or keep both?)
+# The request says "Move filters, toggles, and controls to st.sidebar"
+st.sidebar.divider()
+st.sidebar.markdown("## 🌡️ Sensor Data Fusion")
+st.sidebar.caption("Optional manual inputs to improve prediction accuracy.")
+
+temp_input = st.sidebar.number_input("Temperature (°C)", min_value=0.0, max_value=60.0, value=0.0, step=0.1)
+humid_input = st.sidebar.number_input("Humidity (%)", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
+soil_input = st.sidebar.number_input("Soil Moisture (%)", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
+
+sensor_data = {}
+if temp_input > 0: sensor_data['temp'] = temp_input
+if humid_input > 0: sensor_data['humidity'] = humid_input
+if soil_input > 0: sensor_data['soil_moisture'] = soil_input
+if not sensor_data: sensor_data = None
 
 # Initialize session state for analysis history
 if 'analysis_history' not in st.session_state:
@@ -121,6 +144,31 @@ def _load_text(path):
 # -------------------------------------------------
 # LOAD CSS & ADVANCED UI ENHANCEMENTS
 # -------------------------------------------------
+
+# Mobile viewport meta tag - CRITICAL for mobile responsiveness
+st.markdown("""
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+    /* Base mobile styles - always applied */
+    @media screen and (max-width: 768px) {
+        .main .block-container {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+            max-width: 100% !important;
+        }
+        [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap !important;
+        }
+        [data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
 
 if not MOBILE_SAFE_MODE:
         st.markdown(f"<style>{_load_text('static/advanced_style_enhanced.css')}</style>", unsafe_allow_html=True)
@@ -248,7 +296,7 @@ if not MOBILE_SAFE_MODE:
                     </svg>
                 </div>
                 <h1 style="margin: 0; font-size: 3.5rem; letter-spacing: -0.03em;">SmartRoot AI</h1>
-                <p style="margin-top: 1rem; color: #86868b; font-size: 1.25rem;">Advanced root analysis powered by intelligence.</p>
+                <p style="margin-top: 1rem; color: #86868b; font-size: 1.25rem;">Vetiver Grass Analysis — Root & Plant Health Intelligence</p>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-top: 3rem; max-width: 800px; margin-left: auto; margin-right: auto;">
                     <div class="feature-card">
@@ -290,7 +338,7 @@ else:
                 </style>
                 <div style="padding: 1rem 0;">
                     <h2 style="margin: 0 0 0.5rem 0; color: #111827;">SmartRoot-AI</h2>
-                    <p style="margin: 0; color: #4b5563;">Mobile safe mode enabled for better compatibility.</p>
+                    <p style="margin: 0; color: #4b5563;">Vetiver Grass Analysis — Mobile safe mode enabled.</p>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -434,7 +482,9 @@ def render_circular_health_score(score, label="Health Score"):
                         style="stroke-dashoffset: {offset}; stroke: url(#gradient-{gradient_class});"></circle>
             </svg>
             <div class="progress-value animate">
-                <div class="score-number" style="background: linear-gradient(135deg, {color_start}, {color_end}); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{score}</div>
+                <div class="score-number-outer">
+                    <span class="score-number" style="color: {color_start};">{score}</span>
+                </div>
                 <div class="score-label">{label}</div>
             </div>
         </div>
@@ -700,7 +750,18 @@ def create_root_3d_visualization(segments, max_depth):
         ),
         paper_bgcolor='rgba(27, 20, 15, 1)',
         margin=dict(l=0, r=0, t=0, b=0),
-        showlegend=False
+        showlegend=False,
+        # Mobile-friendly config
+        dragmode='orbit',
+        height=350,
+    )
+    
+    # Mobile touch config
+    fig.update_layout(
+        modebar=dict(
+            orientation='h',
+            bgcolor='rgba(0,0,0,0.5)'
+        )
     )
     
     return fig
@@ -841,13 +902,19 @@ def _cache_set(key, value):
 
 
 @st.cache_data(show_spinner=False)
-def cached_predict_stress(file_bytes):
-    key = f"stress|{hashlib.md5(file_bytes).hexdigest()}"
+def cached_predict_stress(file_bytes, model_name="default", use_ensemble=False, use_clahe=False, use_bg_remove=False, sensor_data=None):
+    # Create hash for sensor data
+    sensor_hash = hashlib.md5(json.dumps(sensor_data, sort_keys=True).encode()).hexdigest() if sensor_data else "None"
+    key = f"stress|{model_name}|{use_ensemble}|{use_clahe}|{use_bg_remove}|{sensor_hash}|{hashlib.md5(file_bytes).hexdigest()}"
+    
     cached = _cache_get(key)
     if cached is not None:
         return cached
     image_path = _bytes_to_temp_file(file_bytes)
-    return _cache_set(key, predict_stress(image_path))
+    if use_ensemble:
+        return _cache_set(key, predict_stress_ensemble(image_path, use_clahe=use_clahe, use_bg_remove=use_bg_remove, sensor_data=sensor_data))
+    else:
+        return _cache_set(key, predict_stress(image_path, model_name=model_name, use_clahe=use_clahe, use_bg_remove=use_bg_remove, sensor_data=sensor_data))
 
 
 @st.cache_data(show_spinner=False)
@@ -891,13 +958,13 @@ def cached_classify_root_species_fast(file_bytes):
 
 
 @st.cache_data(show_spinner=False)
-def cached_analyze_root_image(file_bytes):
-    key = f"root_analyze|{hashlib.md5(file_bytes).hexdigest()}"
+def cached_analyze_root_image(file_bytes, use_unet=False):
+    key = f"root_analyze|{use_unet}|{hashlib.md5(file_bytes).hexdigest()}"
     cached = _cache_get(key)
     if cached is not None:
         return cached
     image_path = _bytes_to_temp_file(file_bytes)
-    return _cache_set(key, analyze_root_image(image_path))
+    return _cache_set(key, analyze_root_image(image_path, use_unet=use_unet))
 
 
 @st.cache_data(show_spinner=False)
@@ -1337,78 +1404,185 @@ st.markdown(
 )
 
 # -------------------------------------------------
-# INPUT CONTROLS
+# UI LAYOUT BRANCHING (PRO MODE)
 # -------------------------------------------------
-st.markdown("<a id='upload-section'></a>", unsafe_allow_html=True)
+if st.session_state.get('pro_mode', False):
+    with st.sidebar:
+        st.markdown("### ⚙️ Analysis Parameters")
+        soil_type = st.selectbox("🌍 Soil Type", ["Sandy", "Clay", "Loamy"], key="pro_soil_type")
+        
+        st.markdown("### ⚡ Performance")
+        fast_overall = st.checkbox("⚡ Fast Overall", value=False, key="pro_fast_overall")
+        fast_root_analysis = st.checkbox("⚡ Fast Root Analysis", value=True, key="pro_fast_root")
+        
+        st.markdown("### 🧠 AI Model")
+        model_name = st.selectbox("Choose Model", ["default", "resnet50", "efficientnet"], key="pro_model_name")
+        use_ensemble = st.checkbox("Enable Ensemble", value=False, key="pro_ensemble")
+        
+        st.markdown("### 🧪 Preprocessing")
+        use_clahe = st.checkbox("Enable CLAHE", value=False, key="pro_clahe")
+        use_bg_remove = st.checkbox("Background Removal", value=False, key="pro_bg")
+        
+        st.markdown("### 🔬 Advanced")
+        use_unet = st.checkbox("U-Net Segmentation", value=False, key="pro_unet")
+        show_xai = st.checkbox("Show Grad-CAM", value=False, key="pro_xai")
 
-with st.expander("📋 Upload & Configure Analysis", expanded=True):
-    st.markdown("""
-    <p style='color: #a0a0a0; margin-bottom: 1.5rem;'>Securely upload your plant images and configure simulation parameters.</p>
-    """, unsafe_allow_html=True)
+    # Tabs for modern Pro UI
+    tab_dash, tab_upload, tab_analyze, tab_simulate = st.tabs(["📊 Dashboard", "📤 Upload", "🔬 Analysis", "🧪 Simulation"])
     
-    c1, c2 = st.columns([1.5, 1])
+    with tab_upload:
+        st.markdown("### 📤 Image Upload")
+        uploaded_file = st.file_uploader("📸 Upload Plant Image", type=["jpg", "png", "jpeg"], key="pro_plant_file")
+        root_image_file = st.file_uploader("🪴 Upload Root Image", type=["jpg", "png", "jpeg"], key="pro_root_file")
+        
+    # Variables mapping for downstream logic
+    plant_image_bytes = uploaded_file.getvalue() if uploaded_file else None
+    root_image_bytes = root_image_file.getvalue() if root_image_file else None
 
-    with c1:
-        # Plant Image Section Header
+else:
+    # --- ORIGINAL LAYOUT (REVERSIBLE) ---
+    st.markdown("<a id='upload-section'></a>", unsafe_allow_html=True)
+    with st.expander("📋 Upload & Configure Analysis", expanded=True):
+        st.markdown("<p style='color: #a0a0a0; margin-bottom: 1.5rem;'>Securely upload your Vetiver plant images and configure AI analysis parameters.</p>", unsafe_allow_html=True)
+        
+        # =============================================
+        # SECTION 1: IMAGE UPLOAD (Clear Separation)
+        # =============================================
         st.markdown("""
-        <div style='background: #111111; border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; border-left: 3px solid #10b981; display: inline-block;'>
-            <span style='font-size: 0.8rem; color: #10b981; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;'>🌿 Plant Analysis</span>
+        <div style='background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #2d3748;'>
+            <h4 style='color: #ffffff; margin: 0 0 1rem 0; font-size: 1.1rem;'>📤 Image Upload</h4>
         </div>
         """, unsafe_allow_html=True)
-        uploaded_file = st.file_uploader(
-            "📸 Upload Vetiver Plant Image",
-            type=["jpg", "png", "jpeg"],
-            help="Select a clear image of your vetiver plant for analysis"
-        )
         
-        st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+        upload_col1, upload_col2 = st.columns(2)
         
-        # Root Image Section Header
+        with upload_col1:
+            st.markdown("""
+            <div style='background: #0d1117; border-radius: 12px; padding: 1rem; border-left: 4px solid #10b981; margin-bottom: 0.5rem;'>
+                <span style='color: #10b981; font-weight: 700; font-size: 1rem;'>🌿 PLANT HEALTH ANALYSIS</span>
+                <p style='color: #8b949e; font-size: 0.8rem; margin: 0.5rem 0 0 0;'>Upload aerial/leaf image for stress detection using CNN</p>
+            </div>
+            """, unsafe_allow_html=True)
+            uploaded_file = st.file_uploader("Upload Vetiver Plant Image", type=["jpg", "png", "jpeg"], 
+                                             help="Clear image of Vetiver leaves/plant for health & stress analysis",
+                                             key="plant_uploader")
+        
+        with upload_col2:
+            st.markdown("""
+            <div style='background: #0d1117; border-radius: 12px; padding: 1rem; border-left: 4px solid #8b5cf6; margin-bottom: 0.5rem;'>
+                <span style='color: #8b5cf6; font-weight: 700; font-size: 1rem;'>🧬 ROOT SYSTEM ANALYSIS</span>
+                <p style='color: #8b949e; font-size: 0.8rem; margin: 0.5rem 0 0 0;'>Upload root image for morphology & trait extraction</p>
+            </div>
+            """, unsafe_allow_html=True)
+            root_image_file = st.file_uploader("Upload Root Image", type=["jpg", "png", "jpeg"],
+                                               help="Clear image of Vetiver roots for structure analysis",
+                                               key="root_uploader")
+        
+        st.markdown("<hr style='border: 0; height: 1px; background: #2d3748; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+        
+        # =============================================
+        # SECTION 2: AI MODEL CONFIGURATION
+        # =============================================
         st.markdown("""
-        <div style='background: #111111; border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; border-left: 3px solid #8b5cf6; display: inline-block;'>
-            <span style='font-size: 0.8rem; color: #8b5cf6; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;'>🧬 Root Analysis</span>
+        <div style='background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; border: 1px solid #2d3748;'>
+            <h4 style='color: #ffffff; margin: 0 0 0.5rem 0; font-size: 1.1rem;'>🧠 AI Model Configuration</h4>
         </div>
         """, unsafe_allow_html=True)
-        root_image_file = st.file_uploader(
-            "🪴 Upload Root Image",
-            type=["jpg", "png", "jpeg"],
-            help="Upload a clear root image for root intelligence analysis"
-        )
+        
+        model_col1, model_col2 = st.columns(2)
+        
+        with model_col1:
+            st.markdown("""
+            <div style='background: #10b98115; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem;'>
+                <span style='color: #10b981; font-weight: 600; font-size: 0.85rem;'>🌿 Plant Stress Model (CNN)</span>
+            </div>
+            """, unsafe_allow_html=True)
+            model_name = st.selectbox(
+                "Select Plant Health Model",
+                ["default", "resnet50", "efficientnet"], 
+                index=0, 
+                format_func=lambda x: {
+                    "default": "🎯 Vetiver CNN (Recommended)",
+                    "resnet50": "🔬 ResNet50 (Experimental)",
+                    "efficientnet": "⚡ EfficientNet (Experimental)"
+                }.get(x, x),
+                help="Vetiver CNN is trained specifically for Vetiver stress detection. ResNet50/EfficientNet are general-purpose models."
+            )
+            use_ensemble = st.checkbox("Enable Ensemble (Combine all models)", value=False, 
+                                       help="Uses all 3 models and averages predictions. Slower but more accurate.")
+            
+            st.markdown("""
+            <div style='background: #1e293b; border-radius: 8px; padding: 0.75rem; margin-top: 0.75rem; font-size: 0.75rem; color: #94a3b8;'>
+                <strong>Models Available:</strong><br>
+                • <span style='color: #10b981;'>Vetiver CNN</span>: Custom-trained for Vetiver stress (3 classes)<br>
+                • <span style='color: #f59e0b;'>ResNet50</span>: ImageNet pretrained, feature extraction<br>
+                • <span style='color: #8b5cf6;'>EfficientNet</span>: Efficient architecture, experimental
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with model_col2:
+            st.markdown("""
+            <div style='background: #8b5cf615; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem;'>
+                <span style='color: #8b5cf6; font-weight: 600; font-size: 0.85rem;'>🧬 Root Analysis Model (LLM + CV)</span>
+            </div>
+            """, unsafe_allow_html=True)
+            use_unet = st.checkbox("Enable U-Net Segmentation", value=False,
+                                   help="Deep learning segmentation for precise root boundary detection")
+            show_xai = st.checkbox("Show Grad-CAM Explanation", value=False,
+                                   help="Visualize which parts of the image the model focuses on")
+            
+            st.markdown("""
+            <div style='background: #1e293b; border-radius: 8px; padding: 0.75rem; margin-top: 0.75rem; font-size: 0.75rem; color: #94a3b8;'>
+                <strong>Root Analysis Pipeline:</strong><br>
+                • <span style='color: #8b5cf6;'>Species ID</span>: LLM-based Vetiver detection<br>
+                • <span style='color: #ec4899;'>Trait Extraction</span>: OpenCV morphology analysis<br>
+                • <span style='color: #06b6d4;'>U-Net</span>: Optional deep segmentation
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("<hr style='border: 0; height: 1px; background: #2d3748; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+        
+        # =============================================
+        # SECTION 3: ENVIRONMENT & PERFORMANCE
+        # =============================================
+        env_col1, env_col2 = st.columns(2)
+        
+        with env_col1:
+            st.markdown("""
+            <div style='background: #0ea5e915; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem;'>
+                <span style='color: #0ea5e9; font-weight: 600; font-size: 0.85rem;'>🌍 Environment Settings</span>
+            </div>
+            """, unsafe_allow_html=True)
+            soil_type = st.selectbox("Soil Type", ["Sandy", "Clay", "Loamy"],
+                                     help="Affects root growth simulation parameters")
+        
+        with env_col2:
+            st.markdown("""
+            <div style='background: #f59e0b15; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem;'>
+                <span style='color: #f59e0b; font-weight: 600; font-size: 0.85rem;'>⚡ Performance Options</span>
+            </div>
+            """, unsafe_allow_html=True)
+            fast_overall = st.checkbox("Fast Analysis (Lower Accuracy)", value=False)
+            fast_root_analysis = st.checkbox("Fast Root Analysis", value=True)
+        
+        st.markdown("<hr style='border: 0; height: 1px; background: #2d3748; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+        
+        # =============================================
+        # SECTION 4: PREPROCESSING
+        # =============================================
+        st.markdown("""
+        <div style='background: #ec489915; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem;'>
+            <span style='color: #ec4899; font-weight: 600; font-size: 0.85rem;'>🧪 Image Preprocessing</span>
+        </div>
+        """, unsafe_allow_html=True)
+        preprocess_col1, preprocess_col2 = st.columns(2)
+        with preprocess_col1:
+            use_clahe = st.checkbox("CLAHE Contrast Enhancement", value=False)
+        with preprocess_col2:
+            use_bg_remove = st.checkbox("Background Removal (Experimental)", value=False)
 
-    with c2:
-        # Environment Settings Section Header
-        st.markdown("""
-        <div style='background: #111111; border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; border-left: 3px solid #0ea5e9; display: inline-block;'>
-            <span style='font-size: 0.8rem; color: #0ea5e9; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;'>🌍 Environment Settings</span>
-        </div>
-        """, unsafe_allow_html=True)
-        soil_type = st.selectbox(
-            "🌍 Soil Type",
-            ["Sandy", "Clay", "Loamy"],
-            help="Select the type of soil where the plant is grown"
-        )
-        
-        st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
-        
-        # Performance Options Section Header
-        st.markdown("""
-        <div style='background: #111111; border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; border-left: 3px solid #f59e0b; display: inline-block;'>
-            <span style='font-size: 0.8rem; color: #f59e0b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;'>⚡ Performance Options</span>
-        </div>
-        """, unsafe_allow_html=True)
-        fast_overall = st.checkbox(
-            "⚡ Fast overall analysis (skip LLM image species)",
-            value=True,
-            help="Speeds up by skipping LLM-based species classification"
-        )
-        fast_root_analysis = st.checkbox(
-            "⚡ Fast root analysis (less detail)",
-            value=True,
-            help="Speeds up root analysis by reducing resolution and skipping heavy metrics"
-        )
-
-plant_image_bytes = uploaded_file.getvalue() if uploaded_file else None
-root_image_bytes = root_image_file.getvalue() if root_image_file else None
+    plant_image_bytes = uploaded_file.getvalue() if uploaded_file else None
+    root_image_bytes = root_image_file.getvalue() if root_image_file else None
 
 # -------------------------------------------------
 # ROOT IMAGE INTELLIGENCE (OPTIONAL)
@@ -1428,16 +1602,30 @@ if root_image_file:
             unsafe_allow_html=True
         )
         with st.spinner("Analyzing root image..."):
-            if fast_root_analysis:
+            if fast_root_analysis and not use_unet:
                 root_report = cached_analyze_root_image_fast(root_image_bytes)
             else:
-                root_report = cached_analyze_root_image(root_image_bytes)
+                root_report = cached_analyze_root_image(root_image_bytes, use_unet=use_unet)
+            
             if fast_overall:
                 root_species = cached_classify_root_species_fast(root_image_bytes)
             else:
                 root_species = cached_classify_root_species(root_image_bytes)
         skeleton_placeholder.empty()
         
+        # Validate Species - VETIVER ONLY
+        root_species_name = root_species.get('species', 'Unknown')
+        is_vetiver_root = root_species.get('is_vetiver', False) or "vetiver" in root_species_name.lower()
+        
+        if not is_vetiver_root:
+            st.error(f"❌ **Non-Vetiver Root Detected**: {root_species_name}")
+            st.warning("⚠️ This application is **exclusively designed for Vetiver roots**. Analysis of other root types may produce inaccurate results.")
+            
+            continue_root_anyway = st.checkbox("Continue root analysis anyway (results may be inaccurate)", value=False, key="continue_root")
+            if not continue_root_anyway:
+                st.info("📸 Please upload a Vetiver root image to continue.")
+                st.stop()
+
         # Update progress step and dashboard stats
         st.session_state.current_step = 1
         root_health = root_report.get('root_health_index', 50)
@@ -1451,70 +1639,100 @@ if root_image_file:
         st.markdown("<div class='section-separator'>🧬 Root Image Intelligence</div>", unsafe_allow_html=True)
 
         # Circular Health Score Visualization
-        health_col1, health_col2, health_col3 = st.columns([1, 1.2, 1])
-        with health_col2:
-            st.markdown(render_circular_health_score(root_health, "Root Health"), unsafe_allow_html=True)
+        # --- ORIGINAL ROOT UI ---
+        if not st.session_state.get('pro_mode', False):
+            # Circular Health Score Visualization
+            health_col1, health_col2, health_col3 = st.columns([1, 1.2, 1])
+            with health_col2:
+                st.markdown(render_circular_health_score(root_health, "Root Health"), unsafe_allow_html=True)
         
-        # Mini gauges for key metrics in a horizontal row
-        symmetry_pct = min(100, int(root_report.get('symmetry_index', 0) * 100))
-        st.markdown(f"""
-        <div style="display: flex; justify-content: center; align-items: flex-start; gap: 3rem; padding: 1.5rem 0; flex-wrap: wrap;">
-            {render_mini_gauge(root_report.get('water_efficiency', 0), "Water", "#0ea5e9")}
-            {render_mini_gauge(root_report.get('nutrient_efficiency', 0), "Nutrient", "#10b981")}
-            {render_mini_gauge(symmetry_pct, "Symmetry", "#8b5cf6")}
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Root Intelligence Summary Box
-        st.markdown(f"""
-<div class='stress-result-box'>
-    <div class='stress-label'>🧬 Analysis Result</div>
-    <div class='stress-value'>{root_report.get('root_type', 'Unknown')}</div>
-    <div style='display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;'>
-        <div class='stress-reliability-pill'>
-            <span>🩺</span>
-            <span>{root_report.get('health_status', 'Unknown')}</span>
-        </div>
-        <div class='stress-reliability-pill'>
-            <span>🌿</span>
-            <span>Species: {root_species.get('species', 'Unknown')}</span>
-        </div>
-        <div class='stress-reliability-pill'>
-             <span>📊</span>
-             <span>Health Index: {root_report.get('root_health_index', 0)}/100</span>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-        # LLM-Powered Root Analysis Explanation
-        with st.expander("🤖 AI Root Analysis Insights", expanded=True):
-            with st.spinner("Generating AI insights..."):
-                root_explanation = llm_explain_root_analysis(
-                    species=root_species.get('species', 'Unknown'),
-                    health_index=root_report.get('root_health_index', 50),
-                    water_efficiency=root_report.get('water_efficiency', 50),
-                    nutrient_efficiency=root_report.get('nutrient_efficiency', 50),
-                    root_type=root_report.get('root_type', 'Unknown')
-                )
+        if st.session_state.get('pro_mode', False):
+            with tab_analyze:
+                st.subheader("🧬 Pro Analysis: Root Intelligence")
+                ui_v3.render_prediction_banner(root_report.get('root_type', 'Unknown'), root_health/100.0)
+                
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.image(root_image_bytes, caption="Original Root Image", use_column_width=True)
+                with c2:
+                    ui_v3.render_root_geometry_plotly(root_report)
+        
+        if not st.session_state.get('pro_mode', False):
+            # Mini gauges for key metrics in a horizontal row
+            symmetry_pct = min(100, int(root_report.get('symmetry_index', 0) * 100))
             st.markdown(f"""
-            <div style="background: #000000; border-radius: 16px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.15);">
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                    <span style="font-size: 1.5rem;">🧬</span>
-                    <span style="font-size: 1.1rem; font-weight: 700; color: #10b981;">Root Type: {root_report.get('root_type', 'Unknown')}</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                    <span style="font-size: 1.5rem;">🌿</span>
-                    <span style="font-size: 1.1rem; font-weight: 700; color: #8b5cf6;">Species: {root_species.get('species', 'Unknown')}</span>
-                </div>
-                <div style="color: #ffffff; line-height: 1.7; font-size: 0.95rem;">
-                    {root_explanation.replace(chr(10), '<br>')}
-                </div>
+            <div style="display: flex; justify-content: center; align-items: flex-start; gap: 3rem; padding: 1.5rem 0; flex-wrap: wrap;">
+                {render_mini_gauge(root_report.get('water_efficiency', 0), "Water", "#0ea5e9")}
+                {render_mini_gauge(root_report.get('nutrient_efficiency', 0), "Nutrient", "#10b981")}
+                {render_mini_gauge(symmetry_pct, "Symmetry", "#8b5cf6")}
             </div>
             """, unsafe_allow_html=True)
 
-        # Detailed Metrics Grid
-        st.markdown(f"""
+        if not st.session_state.get('pro_mode', False):
+            # Root Intelligence Summary Box
+            st.markdown(f"""
+            <div class='stress-result-box' style='background: linear-gradient(135deg, #1e293b, #0f172a) !important; color: white !important;'>
+        <div class='stress-label' style='color: #94a3b8 !important;'>🧬 Analysis Result</div>
+        <div style='display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;'>
+            <div style='background: #3730a3; color: #ffffff; font-weight: 800; padding: 0.5rem 1.25rem; border-radius: 20px; font-size: 1rem; border: 1px solid rgba(255,255,255,0.1);'>
+                Species: {root_species.get('species', 'Unknown')}
+            </div>
+            <div style='background: #1e293b; color: #94a3b8; font-weight: 600; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.05);'>
+                🤖 Engine: {root_species.get('model_engine', 'Llama-4 Scout')}
+            </div>
+        </div>
+        <div class='stress-value' style='background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.3));'>{root_report.get('root_type', 'Unknown')}</div>
+        <div style='display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;'>
+            <div class='stress-reliability-pill' style='background: rgba(255,255,255,0.1) !important; color: #ffffff !important;'>
+                <span>🩺</span>
+                <span>{root_report.get('health_status', 'Unknown')}</span>
+            </div>
+            <div class='stress-reliability-pill' style='background: rgba(255,255,255,0.1) !important; color: #ffffff !important;'>
+                <span>📏</span>
+                <span>Depth: {root_report.get('root_system_depth', 0) * 0.05:.1f}cm</span>
+            </div>
+            <div class='stress-reliability-pill' style='background: rgba(255,255,255,0.1) !important; color: #ffffff !important;'>
+                 <span>📊</span>
+                 <span>Health Index: {root_report.get('root_health_index', 0)}/100</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+        if not st.session_state.get('pro_mode', False):
+            # LLM-Powered Root Analysis Explanation
+            with st.expander("🤖 AI Root Analysis Insights", expanded=True):
+                with st.spinner("Generating AI insights..."):
+                    root_explanation = llm_explain_root_analysis(
+                        species=root_species.get('species', 'Unknown'),
+                        health_index=root_report.get('root_health_index', 50),
+                        water_efficiency=root_report.get('water_efficiency', 50),
+                        nutrient_efficiency=root_report.get('nutrient_efficiency', 50),
+                        root_type=root_report.get('root_type', 'Unknown')
+                    )
+                st.markdown(f"""
+                <div style="background: #000000; border-radius: 16px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.15);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span style="font-size: 1.5rem;">🧬</span>
+                        <span style="font-size: 1.1rem; font-weight: 700; color: #10b981;">Root Type: {root_report.get('root_type', 'Unknown')}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span style="font-size: 1.5rem;">🌿</span>
+                        <span style="font-size: 1.1rem; font-weight: 700; color: #8b5cf6;">Species: {root_species.get('species', 'Unknown')}</span>
+                    </div>
+                    <div style="color: #ffffff; line-height: 1.7; font-size: 0.95rem;">
+                        {root_explanation.replace(chr(10), '<br>')}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        if not st.session_state.get('pro_mode', False):
+            # Detailed Metrics Grid (Main)
+            st.markdown(f"""
+<style>
+    .analytics-value {{ color: #ffffff !important; font-weight: 800 !important; }}
+    .analytics-label {{ color: #a1a1a6 !important; font-weight: 600 !important; }}
+</style>
 <div class='analytics-grid'>
     <div class='analytics-box'>
         <div class='analytics-icon'>📐</div>
@@ -1539,90 +1757,118 @@ if root_image_file:
 </div>
 """, unsafe_allow_html=True)
 
-        st.dataframe(pd.DataFrame([
-            {"Trait": "Branch Density", "Value": str(root_report.get("branch_density", "") or "-")},
-            {"Trait": "Growth Direction", "Value": str(root_report.get("growth_direction", "") or "-")},
-            {"Trait": "Root Age", "Value": str(root_report.get("age_estimate", "") or "-")},
-            {"Trait": "Biomass", "Value": str(root_report.get("biomass", "") or "-")},
-            {"Trait": "Soil Type", "Value": str(root_report.get("soil_type", "") or "-")},
-            {"Trait": "Soil Compaction", "Value": str(root_report.get("soil_compaction", "") or "-")},
-            {"Trait": "Branch Points", "Value": str(root_report.get("branch_points", 0) or "-")},
-            {"Trait": "End Points", "Value": str(root_report.get("end_points", 0) or "-")},
-            {"Trait": "Branching Factor", "Value": str(root_report.get("branching_factor", 0.0) or "-")},
-            {"Trait": "Root Density", "Value": str(root_report.get("root_density", 0.0) or "-")},
-            {"Trait": "Root Length Index", "Value": str(root_report.get("root_length_index", 0.0) or "-")},
-            {"Trait": "Avg Thickness", "Value": str(root_report.get("avg_thickness", 0.0) or "-")},
-            {"Trait": "Thickness Variation", "Value": str(root_report.get("thickness_variation", 0.0) or "-")}
-        ]))
+        def render_compact_stats(entries, trait_icons=None, dark_mode=False):
+            if trait_icons is None: trait_icons = {}
+            
+            comp_id = f"stats_{random.randint(1000, 9999)}"
+            text_col = "#FFFFFF" if dark_mode else "#111827"
+            val_col = "#10B981" if dark_mode else "#059669"
+            border_col = "rgba(255,255,255,0.15)" if dark_mode else "#f1f5f9"
+            
+            html = f"""<style>
+#{comp_id} .v3-row {{ border-bottom: 1px solid {border_col}; }}
+#{comp_id} .v3-label {{ color: {text_col} !important; font-weight: 700 !important; font-size: 0.95rem !important; }}
+#{comp_id} .v3-value {{ color: {val_col} !important; font-weight: 800 !important; font-size: 1.1rem !important; font-family: monospace !important; }}
+</style>
+<div id='{comp_id}' style='display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem 3rem;'>"""
+            
+            mid = (len(entries) + 1) // 2
+            groups = [entries[:mid], entries[mid:]]
+            
+            for group in groups:
+                if not group: continue
+                html += "<div>"
+                for e in group:
+                    icon = trait_icons.get(e['Trait'], "🔹")
+                    html += f"""<div class='v3-row' style='display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0;'>
+<div style='display: flex; align-items: center; gap: 0.75rem;'>
+<span style='font-size: 1.2rem;'>{icon}</span>
+<span class='v3-label'>{e['Trait']}</span>
+</div>
+<div class='v3-value'>{e['Value']}</div>
+</div>"""
+                html += "</div>"
+            
+            html += "</div>"
+            st.markdown(html, unsafe_allow_html=True)
 
-        with st.expander("📊 Detailed Root Geometry (Depth/Width/Angles)"):
-            st.dataframe(pd.DataFrame([
-                {"Trait": "Root Area", "Value": str(root_report.get("root_area", 0) or "-")},
-                {"Trait": "Avg Root Density", "Value": str(root_report.get("avg_root_density", 0.0) or "-")},
-                {"Trait": "Root System Depth", "Value": str(root_report.get("root_system_depth", 0) or "-")},
-                {"Trait": "Root System Width", "Value": str(root_report.get("root_system_width", 0) or "-")},
-                {"Trait": "Skeleton Depth", "Value": str(root_report.get("skeleton_depth", 0) or "-")},
-                {"Trait": "Skeleton Width", "Value": str(root_report.get("skeleton_width", 0) or "-")},
-                {"Trait": "Root Distribution X", "Value": str(root_report.get("root_distribution_x", 0.0) or "-")},
-                {"Trait": "Root Distribution Y", "Value": str(root_report.get("root_distribution_y", 0.0) or "-")},
-                {"Trait": "Root Tip Count", "Value": str(root_report.get("root_tip_count", 0) or "-")},
-                {"Trait": "Top Angle", "Value": str(root_report.get("top_angle", 0.0) or "-")},
-                {"Trait": "Bottom Angle", "Value": str(root_report.get("bottom_angle", 0.0) or "-")},
-                {"Trait": "Angle Mean", "Value": str(root_report.get("angle_mean", 0.0) or "-")},
-                {"Trait": "Angle Min", "Value": str(root_report.get("angle_min", 0.0) or "-")},
-                {"Trait": "Angle Max", "Value": str(root_report.get("angle_max", 0.0) or "-")}
-            ]))
+        trait_icons = {
+            "Branch Density": "📊", "Growth Direction": "↕️", "Root Age": "⏳", "Biomass": "⚖️",
+            "Soil Type": "🏜️", "Soil Compaction": "🧱", "Branch Points": "📍", "End Points": "🔚",
+            "Branching Factor": "🌿", "Root Density": "📏", "Avg Thickness": "⭕", "Root Area": "📐",
+            "Avg Density": "🧪", "Depth (CM)": "📏", "Width (CM)": "↔️", "Symmetry": "☯️",
+            "Angle Mean": "📐", "Tips": "🧷", "D10": "📉", "D50": "📊", "D90": "📈",
+            "DS10": "📉", "DS50": "📊", "DS90": "📈", "Adv Count": "🌱", "Basal Count": "🪴",
+            "Adv Angle": "📐", "Basal Angle": "📐", "Taproot Dia": "⭕", "Hypocotyl Dia": "⭕",
+            "Crown @ 50%": "👑", "Crown @ 90%": "👑", "Nodal Length": "📏", "Nodal Avg Dia": "⭕",
+            "Lat Branch Freq": "〰️", "Lat Avg Length": "📏", "Lat Angle Mean": "📐"
+        }
 
-        diameter_pcts = root_report.get("diameter_percentiles", {})
-        skel_pcts = root_report.get("skeleton_diameter_percentiles", {})
-        with st.expander("📐 Diameter Percentiles (D10–D90)"):
-            st.dataframe(pd.DataFrame([
-                {"Trait": "D10", "Value": str(diameter_pcts.get("D10") if diameter_pcts.get("D10") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "D20", "Value": str(diameter_pcts.get("D20") if diameter_pcts.get("D20") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "D30", "Value": str(diameter_pcts.get("D30") if diameter_pcts.get("D30") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "D40", "Value": str(diameter_pcts.get("D40") if diameter_pcts.get("D40") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "D50", "Value": str(diameter_pcts.get("D50") if diameter_pcts.get("D50") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "D60", "Value": str(diameter_pcts.get("D60") if diameter_pcts.get("D60") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "D70", "Value": str(diameter_pcts.get("D70") if diameter_pcts.get("D70") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "D80", "Value": str(diameter_pcts.get("D80") if diameter_pcts.get("D80") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "D90", "Value": str(diameter_pcts.get("D90") if diameter_pcts.get("D90") not in [None, "", 0, 0.0] else "-")}
-            ]))
-            st.dataframe(pd.DataFrame([
-                {"Trait": "DS10", "Value": str(skel_pcts.get("DS10") if skel_pcts.get("DS10") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "DS20", "Value": str(skel_pcts.get("DS20") if skel_pcts.get("DS20") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "DS30", "Value": str(skel_pcts.get("DS30") if skel_pcts.get("DS30") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "DS40", "Value": str(skel_pcts.get("DS40") if skel_pcts.get("DS40") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "DS50", "Value": str(skel_pcts.get("DS50") if skel_pcts.get("DS50") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "DS60", "Value": str(skel_pcts.get("DS60") if skel_pcts.get("DS60") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "DS70", "Value": str(skel_pcts.get("DS70") if skel_pcts.get("DS70") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "DS80", "Value": str(skel_pcts.get("DS80") if skel_pcts.get("DS80") not in [None, "", 0, 0.0] else "-")},
-                {"Trait": "DS90", "Value": str(skel_pcts.get("DS90") if skel_pcts.get("DS90") not in [None, "", 0, 0.0] else "-")}
-            ]))
+        if not st.session_state.get('pro_mode', False):
+            # Primary Traits Section
+            render_compact_stats([
+                {"Trait": "Branch Density", "Value": str(root_report.get("branch_density") or root_report.get("branch_density_label") or "-")},
+                {"Trait": "Growth Direction", "Value": str(root_report.get("growth_direction") or "-")},
+                {"Trait": "Root Age", "Value": str(root_report.get("age_estimate") or "-")},
+                {"Trait": "Biomass", "Value": str(root_report.get("biomass") or root_report.get("biomass_level") or "-")},
+                {"Trait": "Soil Type", "Value": str(root_report.get("soil_type", "") or "-")},
+                {"Trait": "Soil Compaction", "Value": str(root_report.get("soil_compaction", "") or "-")},
+                {"Trait": "Branch Points", "Value": str(root_report.get("branch_points", 0) or "-")},
+                {"Trait": "End Points", "Value": str(root_report.get("end_points", 0) or "-")},
+                {"Trait": "Branching Factor", "Value": f"{root_report.get('branching_factor', 0.0):.2f}"},
+                {"Trait": "Root Density", "Value": f"{root_report.get('root_density', 0.0):.3f}"},
+                {"Trait": "Avg Thickness", "Value": f"{root_report.get('avg_thickness', 0.0):.2f}"}
+            ], trait_icons)
 
-        with st.expander("🌱 Structural Counts & Diameters"):
-            st.dataframe(pd.DataFrame([
-                {"Trait": "Adventitious Count", "Value": str(root_report.get("adventitious_count", 0) or "-")},
-                {"Trait": "Basal Count", "Value": str(root_report.get("basal_count", 0) or "-")},
-                {"Trait": "Adventitious Angle", "Value": str(root_report.get("adventitious_angle", 0.0) or "-")},
-                {"Trait": "Basal Angle", "Value": str(root_report.get("basal_angle", 0.0) or "-")},
-                {"Trait": "Taproot Diameter", "Value": str(root_report.get("taproot_diameter", 0.0) or "-")},
-                {"Trait": "Hypocotyl Diameter", "Value": str(root_report.get("hypocotyl_diameter", 0.0) or "-")},
-                {"Trait": "Crown Projection 25%", "Value": str(root_report.get("cp_dia25", 0) or "-")},
-                {"Trait": "Crown Projection 50%", "Value": str(root_report.get("cp_dia50", 0) or "-")},
-                {"Trait": "Crown Projection 75%", "Value": str(root_report.get("cp_dia75", 0) or "-")},
-                {"Trait": "Crown Projection 90%", "Value": str(root_report.get("cp_dia90", 0) or "-")}
-            ]))
+        if not st.session_state.get('pro_mode', False):
+            with st.expander("📊 Detailed Root Geometry", expanded=True):
+                depth_px = root_report.get("root_system_depth", 0)
+                width_px = root_report.get("root_system_width", 0)
+                render_compact_stats([
+                    {"Trait": "Root Area", "Value": str(root_report.get("root_area", 0) or "-")},
+                    {"Trait": "Avg Density", "Value": f"{root_report.get('avg_root_density', 0.0):.3f}"},
+                    {"Trait": "Depth (CM)", "Value": f"{depth_px * 0.05:.1f}cm"},
+                    {"Trait": "Width (CM)", "Value": f"{width_px * 0.05:.1f}cm"},
+                    {"Trait": "Symmetry", "Value": f"{root_report.get('symmetry_index', 0.0):.2f}"},
+                    {"Trait": "Angle Mean", "Value": f"{root_report.get('angle_mean', 0.0):.1f}°"},
+                    {"Trait": "Tips", "Value": str(root_report.get("root_tip_count", 0))}
+                ], trait_icons, dark_mode=True)
 
-        with st.expander("🧷 Nodal & Lateral Branching"):
-            st.dataframe(pd.DataFrame([
-                {"Trait": "Nodal Length", "Value": str(root_report.get("nodal_length", 0.0) or "-")},
-                {"Trait": "Nodal Avg Diameter", "Value": str(root_report.get("nodal_avg_diameter", 0.0) or "-")},
-                {"Trait": "Lateral Branch Freq", "Value": str(root_report.get("lateral_branch_freq", 0.0) or "-")},
-                {"Trait": "Lateral Avg Length", "Value": str(root_report.get("lateral_avg_length", 0.0) or "-")},
-                {"Trait": "Lateral Angle Mean", "Value": str(root_report.get("lateral_angle_mean", 0.0) or "-")},
-                {"Trait": "Lateral Angle Min", "Value": str(root_report.get("lateral_angle_min", 0.0) or "-")},
-                {"Trait": "Lateral Angle Max", "Value": str(root_report.get("lateral_angle_max", 0.0) or "-")}
-            ]))
+        if not st.session_state.get('pro_mode', False):
+            diameter_pcts = root_report.get("diameter_percentiles", {})
+            skel_pcts = root_report.get("skeleton_diameter_percentiles", {})
+            with st.expander("📐 Diameter Percentiles (D10–D90)"):
+                render_compact_stats([
+                    {"Trait": "D10", "Value": f"{diameter_pcts.get('D10', 0.0):.2f}"},
+                    {"Trait": "D50", "Value": f"{diameter_pcts.get('D50', 0.0):.2f}"},
+                    {"Trait": "D90", "Value": f"{diameter_pcts.get('D90', 0.0):.2f}"},
+                    {"Trait": "DS10", "Value": f"{skel_pcts.get('DS10', 0.0):.2f}"},
+                    {"Trait": "DS50", "Value": f"{skel_pcts.get('DS50', 0.0):.2f}"},
+                    {"Trait": "DS90", "Value": f"{skel_pcts.get('DS90', 0.0):.2f}"}
+                ], trait_icons, dark_mode=True)
+
+        if not st.session_state.get('pro_mode', False):
+            with st.expander("🌱 Structural Counts & Diameters"):
+                render_compact_stats([
+                    {"Trait": "Adv Count", "Value": str(root_report.get("adventitious_count", 0) or "-")},
+                    {"Trait": "Basal Count", "Value": str(root_report.get("basal_count", 0) or "-")},
+                    {"Trait": "Adv Angle", "Value": f"{root_report.get('adventitious_angle', 0.0):.1f}°"},
+                    {"Trait": "Basal Angle", "Value": f"{root_report.get('basal_angle', 0.0):.1f}°"},
+                    {"Trait": "Taproot Dia", "Value": f"{root_report.get('taproot_diameter', 0.0):.2f}"},
+                    {"Trait": "Hypocotyl Dia", "Value": f"{root_report.get('hypocotyl_diameter', 0.0):.2f}"},
+                    {"Trait": "Crown @ 50%", "Value": f"{root_report.get('cp_dia50', 0) * 0.05:.1f}cm"},
+                    {"Trait": "Crown @ 90%", "Value": f"{root_report.get('cp_dia90', 0) * 0.05:.1f}cm"}
+                ], trait_icons, dark_mode=True)
+
+        if not st.session_state.get('pro_mode', False):
+            with st.expander("🧷 Nodal & Lateral Branching"):
+                render_compact_stats([
+                    {"Trait": "Nodal Length", "Value": str(root_report.get("nodal_length", 0.0) or "-")},
+                    {"Trait": "Nodal Avg Dia", "Value": str(root_report.get("nodal_avg_diameter", 0.0) or "-")},
+                    {"Trait": "Lat Branch Freq", "Value": str(root_report.get("lateral_branch_freq", 0.0) or "-")},
+                    {"Trait": "Lat Avg Length", "Value": str(root_report.get("lateral_avg_length", 0.0) or "-")},
+                    {"Trait": "Lat Angle Mean", "Value": str(root_report.get("lateral_angle_mean", 0.0) or "-")}
+                ], trait_icons, dark_mode=True)
 
         try:
             report_pdf = _build_root_image_report_pdf(
@@ -1662,25 +1908,38 @@ if uploaded_file:
             species_result = cached_classify_plant_species_fast(plant_image_bytes)
         else:
             species_result = cached_classify_plant_species(plant_image_bytes)
-    st.subheader("🌿 Plant Species Identification")
-    sp1, sp2 = st.columns(2)
-    with sp1:
-        st.metric("Species", species_result.get("species", ""))
-    with sp2:
-        st.metric("Confidence", f"{species_result.get('confidence', 0.0):.0%}")
-
-    if species_result.get("species", "").strip().lower() not in {"vetiver"}:
-        st.markdown("""
-        <div style="background: #000000; border: 1px solid #f59e0b; border-radius: 12px; padding: 1rem 1.5rem; margin: 1rem 0;">
-            <span style="color: #f59e0b; font-weight: 600;">⚠️ Detected species is not Vetiver. Continuing with stress analysis.</span>
+    st.markdown(f"""
+    <div style='display: flex; justify-content: center; gap: 1rem; margin: 1rem 0;'>
+        <div style='background: #065f46; color: #ffffff; font-weight: 800; padding: 0.6rem 1.5rem; border-radius: 30px; font-size: 1.1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);'>
+            Species: {species_result.get('species', 'Unknown')}
         </div>
-        """, unsafe_allow_html=True)
+        <div style='background: #1e293b; color: #10b981; font-weight: 700; padding: 0.6rem 1.5rem; border-radius: 30px; font-size: 1.1rem; border: 1px solid rgba(16, 185, 129, 0.2);'>
+            Confidence: {species_result.get('confidence', 0.0):.0%}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    confidence = species_result.get('confidence', 0.0)
+    is_vetiver = species_result.get('is_vetiver', False) or "vetiver" in species_result.get('species', '').lower()
+    
+    # Validate Species - VETIVER ONLY
+    detected_species = species_result.get('species', 'Unknown')
+    if not is_vetiver and confidence > 0.3:
+        st.error(f"❌ **Non-Vetiver Plant Detected**: {detected_species}")
+        st.warning("⚠️ This application is **exclusively designed for Vetiver Grass (Chrysopogon zizanioides)**. Analysis of other plants may produce inaccurate results.")
+        
+        # Give user option to continue or stop
+        continue_anyway = st.checkbox("Continue analysis anyway (results may be inaccurate)", value=False)
+        if not continue_anyway:
+            st.info("📸 Please upload a Vetiver grass image to continue.")
+            st.stop()
 
     # -------------------------------------------------
     # CNN + LLM DOMINANCE LOGIC
     # -------------------------------------------------
     with st.spinner("Running stress analysis..."):
-        label, moisture, nutrient, confidence, cnn_weak = cached_predict_stress(plant_image_bytes)
+
+        label, moisture, nutrient, confidence, cnn_weak = cached_predict_stress(plant_image_bytes, model_name, use_ensemble, use_clahe, use_bg_remove, sensor_data)
     
     # Calculate a health score based on moisture, nutrient, and confidence
     plant_health_score = int((moisture + nutrient + (confidence * 100)) / 3)
@@ -1692,452 +1951,551 @@ if uploaded_file:
     st.markdown("<div class='results-section-card'>", unsafe_allow_html=True)
     st.markdown("### 🧠 Stress Assessment Results")
     
+    if show_xai and plant_image_bytes:
+        with st.spinner("Generating AI explanation..."):
+             # Must use temp file logic available in scope or create new temp
+             with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+                 tmp.write(plant_image_bytes)
+                 tmp_path = tmp.name
+             
+             heatmap = get_model_explanation(tmp_path, model_name, use_clahe, use_bg_remove)
+             if heatmap is not None:
+                 original = cv2.imread(tmp_path)
+                 if original is not None:
+                     heatmap = cv2.resize(heatmap, (original.shape[1], original.shape[0]))
+                     overlay = cv2.addWeighted(original, 0.6, heatmap, 0.4, 0)
+                     
+                     if overlay is not None and overlay.size > 0:
+                         if st.session_state.get('pro_mode', False):
+                              # Store for later rendering in the Analysis tab to avoid NameError
+                              st.session_state.last_overlay = overlay
+                         else:
+                             st.markdown("#### 🧩 Model Focus Area (Grad-CAM)")
+                             overlay_rgb = cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
+                             st.image(overlay_rgb, caption=f"AI Attention Map ({model_name})")
+             
+             try: os.unlink(tmp_path)
+             except: pass
+    
     # Circular Health Score Visualization for Plant
     health_col1, health_col2, health_col3 = st.columns([1, 1.2, 1])
     with health_col2:
         st.markdown(render_circular_health_score(plant_health_score, "Plant Health"), unsafe_allow_html=True)
     
-    # Mini gauges for moisture and nutrients in a horizontal row
-    st.markdown(f"""
-    <div style="display: flex; justify-content: center; align-items: flex-start; gap: 3rem; padding: 1.5rem 0; flex-wrap: wrap;">
-        {render_mini_gauge(moisture, "Moisture", "#0ea5e9")}
-        {render_mini_gauge(nutrient, "Nutrients", "#10b981")}
-        {render_mini_gauge(int(confidence * 100), "Confidence", "#f59e0b")}
-    </div>
-    """, unsafe_allow_html=True)
+    if st.session_state.get('pro_mode', False):
+        with tab_dash:
+            st.subheader("📈 Pro Dashboard Insights")
+            ui_v3.render_pro_dashboard_stats(st.session_state.dashboard_stats)
+            
+        with tab_analyze:
+            st.divider()
+            st.subheader("🌿 Pro Analysis: Plant Stress")
+            ui_v3.render_prediction_banner(label, confidence)
+            
+            # Side-by-side preview if XAI is on
+            if show_xai:
+                ax1, ax2 = st.columns(2)
+                with ax1:
+                    st.image(plant_image_bytes, caption="Original Plant Image", use_column_width=True)
+                
+                if hasattr(st.session_state, 'last_overlay'):
+                    with ax2:
+                         st.image(cv2.cvtColor(st.session_state.last_overlay, cv2.COLOR_BGR2RGB), caption=f"AI Attention Map ({model_name})")
+    
+    if not st.session_state.get('pro_mode', False):
+        # Mini gauges for moisture and nutrients in a horizontal row
+        conf_color = "#10b981" if confidence > 0.75 else ("#f59e0b" if confidence > 0.5 else "#ef4444")
+        st.markdown(f"""
+        <div style="display: flex; justify-content: center; align-items: flex-start; gap: 3rem; padding: 1.5rem 0; flex-wrap: wrap;">
+            {render_mini_gauge(moisture, "Moisture", "#0ea5e9")}
+            {render_mini_gauge(nutrient, "Nutrients", "#10b981")}
+            {render_mini_gauge(int(confidence * 100), "Confidence", conf_color)}
+        </div>
+        """, unsafe_allow_html=True)
 
-    if cnn_weak:
-        st.markdown("""
-        <div class='stAlert' style='background-color: #000000; border: 1px solid #f59e0b; border-radius: 12px; padding: 1rem;'>
-            <div style='display: flex; gap: 1rem; align-items: start;'>
-                <div style='font-size: 1.5rem;'>⚠️</div>
-                <div>
-                    <div style='font-weight: 600; margin-bottom: 0.25rem; color: #f59e0b;'>CNN Confidence is Low</div>
-                    <div style='font-size: 0.95rem; color: #ffffff;'>AI biological reasoning dominates this analysis</div>
+    if not st.session_state.get('pro_mode', False):
+        if cnn_weak:
+            st.markdown("""
+            <div class='stAlert' style='background-color: #000000; border: 1px solid #f59e0b; border-radius: 12px; padding: 1rem;'>
+                <div style='display: flex; gap: 1rem; align-items: start;'>
+                    <div style='font-size: 1.5rem;'>⚠️</div>
+                    <div>
+                        <div style='font-weight: 600; margin-bottom: 0.25rem; color: #f59e0b;'>CNN Confidence is Low</div>
+                        <div style='font-size: 0.95rem; color: #ffffff;'>AI biological reasoning dominates this analysis</div>
+                    </div>
                 </div>
             </div>
+            """, unsafe_allow_html=True)
+
+    if not st.session_state.get('pro_mode', False):
+        # Enhanced metrics dashboard with horizontal layout
+        st.markdown("""
+        <div class='metrics-dashboard'>
+            <div class='metric-card moisture'>
+                <div class='metric-label'>💧 Moisture Level</div>
+                <div class='metric-value'>""" + f"{moisture}%" + """</div>
+                <div class='metric-subtitle'>Soil hydration</div>
+            </div>
+            <div class='metric-card nutrients'>
+                <div class='metric-label'>🌿 Nutrients Level</div>
+                <div class='metric-value'>""" + f"{nutrient}%" + """</div>
+                <div class='metric-subtitle'>Plant nutrition</div>
+            </div>
+            <div class='metric-card confidence'>
+                <div class='metric-label'>🔬 CNN Confidence</div>
+                <div class='metric-value'>""" + f"{confidence:.0%}" + """</div>
+                <div class='metric-subtitle'>Model certainty</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
-    # Enhanced metrics dashboard with horizontal layout
-    st.markdown("""
-    <div class='metrics-dashboard'>
-        <div class='metric-card moisture'>
-            <div class='metric-label'>💧 Moisture Level</div>
-            <div class='metric-value'>""" + f"{moisture}%" + """</div>
-            <div class='metric-subtitle'>Soil hydration</div>
+    if not st.session_state.get('pro_mode', False):
+        # Combined Stress Result Box
+        status_icon = "🟢" if not cnn_weak else "🟠"
+        reliability_text = "High Confidence" if not cnn_weak else "Low Confidence"
+        reliability_color = "#34c759" if not cnn_weak else "#ff9500"
+        
+        st.markdown(f"""
+    <div class='stress-result-box' style='background: linear-gradient(135deg, #064e3b, #065f46) !important; color: white !important;'>
+        <div class='stress-label' style='color: #6ee7b7 !important;'>🎯 Detected Stress Type</div>
+        <div style='display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;'>
+            <div style='background: #10b981; color: #ffffff; font-weight: 800; padding: 0.5rem 1.25rem; border-radius: 20px; font-size: 1.1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.1);'>
+                Species: {species_result.get('species', 'Unknown')}
+            </div>
+            <div style='background: #1e293b; color: #94a3b8; font-weight: 600; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.05);'>
+                🤖 ID Engine: {species_result.get('model_engine', 'MobileNetV2')}
+            </div>
         </div>
-        <div class='metric-card nutrients'>
-            <div class='metric-label'>🌿 Nutrients Level</div>
-            <div class='metric-value'>""" + f"{nutrient}%" + """</div>
-            <div class='metric-subtitle'>Plant nutrition</div>
-        </div>
-        <div class='metric-card confidence'>
-            <div class='metric-label'>🔬 CNN Confidence</div>
-            <div class='metric-value'>""" + f"{confidence:.0%}" + """</div>
-            <div class='metric-subtitle'>Model certainty</div>
+        <div class='stress-value' style='background: linear-gradient(180deg, #ffffff 0%, #d1fae5 100%) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important;'>{label}</div>
+        <div style='display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;'>
+            <div class='stress-reliability-pill' style='background: rgba(255,255,255,0.1) !important; color: #ffffff !important;'>
+                <span>{status_icon}</span>
+                <span style='color: {reliability_color} !important;'>{reliability_text}</span>
+            </div>
+            <div class='stress-reliability-pill' style='background: rgba(255,255,255,0.1) !important; color: #ffffff !important;'>
+                <span>🔬</span>
+                <span>CNN Confidence: {confidence:.0%}</span>
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Combined Stress Result Box
-    status_icon = "🟢" if not cnn_weak else "🟠"
-    reliability_text = "High Confidence" if not cnn_weak else "Low Confidence"
-    reliability_color = "#34c759" if not cnn_weak else "#ff9500"
-    
-    st.markdown(f"""
-<div class='stress-result-box'>
-    <div class='stress-label'>🎯 Detected Stress Type</div>
-    <div class='stress-value'>{label}</div>
-    <div style='display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;'>
-        <div class='stress-reliability-pill'>
-            <span>{status_icon}</span>
-            <span style='color: {reliability_color};'>{reliability_text}</span>
-        </div>
-        <div class='stress-reliability-pill'>
-            <span>🔬</span>
-            <span>CNN Confidence: {confidence:.0%}</span>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-    # LLM-Powered Plant Analysis Explanation
-    with st.expander("🤖 AI Plant Analysis Insights", expanded=True):
-        with st.spinner("Generating AI insights..."):
-            plant_explanation = llm_explain_plant_analysis(
-                species=species_result.get('species', 'Unknown'),
-                health_score=plant_health_score,
-                moisture=moisture,
-                nutrient=nutrient,
-                stress_label=label
-            )
-        st.markdown(f"""
-        <div style="background: #000000; border-radius: 16px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.15);">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                <span style="font-size: 1.5rem;">🌿</span>
-                <span style="font-size: 1.1rem; font-weight: 700; color: #10b981;">Plant Type: {species_result.get('species', 'Unknown')}</span>
+    if not st.session_state.get('pro_mode', False):
+        # LLM-Powered Plant Analysis Explanation
+        with st.expander("🤖 AI Plant Analysis Insights", expanded=True):
+            with st.spinner("Generating AI insights..."):
+                plant_explanation = llm_explain_plant_analysis(
+                    species=species_result.get('species', 'Unknown'),
+                    health_score=plant_health_score,
+                    moisture=moisture,
+                    nutrient=nutrient,
+                    stress_label=label
+                )
+            st.markdown(f"""
+            <div style="background: #000000; border-radius: 16px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.15);">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                    <span style="font-size: 1.5rem;">🌿</span>
+                    <span style="font-size: 1.1rem; font-weight: 700; color: #10b981;">Plant Type: {species_result.get('species', 'Unknown')}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                    <span style="font-size: 1.5rem;">🎯</span>
+                    <span style="font-size: 1.1rem; font-weight: 700; color: #f59e0b;">Stress Status: {label}</span>
+                </div>
+                <div style="color: #ffffff; line-height: 1.7; font-size: 0.95rem;">
+                    {plant_explanation.replace(chr(10), '<br>')}
+                </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                <span style="font-size: 1.5rem;">🎯</span>
-                <span style="font-size: 1.1rem; font-weight: 700; color: #f59e0b;">Stress Status: {label}</span>
-            </div>
-            <div style="color: #ffffff; line-height: 1.7; font-size: 0.95rem;">
-                {plant_explanation.replace(chr(10), '<br>')}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.divider()
 
-    # -------------------------------------------------
-    # PARAMETERS USED (USER-SELECTED / FINAL VALUES)
-    # -------------------------------------------------
-    st.markdown("<div class='parameters-section-card'>", unsafe_allow_html=True)
-    st.markdown("### ⚙️ Analysis Parameters & Values")
+    if not st.session_state.get('pro_mode', False):
+        # -------------------------------------------------
+        # PARAMETERS USED (USER-SELECTED / FINAL VALUES)
+        # -------------------------------------------------
+        st.markdown("<div class='parameters-section-card'>", unsafe_allow_html=True)
+        st.markdown("### ⚙️ Analysis Parameters & Values")
 
-    # Parameter explanation with tooltips
-    st.markdown("""
-    <div style='background: rgba(240, 253, 244, 0.5); border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem;'>
-        <p style='color: #475569; font-size: 0.95rem; margin: 0;'>
-            <span style='font-weight: 600;'>These parameters</span> are derived from your selected soil type and the CNN analysis of your plant image. They influence the root growth simulation.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    u1, u2, u3 = st.columns(3)
-
-    with u1:
-        st.markdown(f"""
-        <div style='background: rgba(255, 255, 255, 0.6); border-left: 4px solid #10b981; border-radius: 0.75rem; padding: 1.5rem; text-align: center;'>
-            <div style='font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem;'>🌍 Soil Type</div>
-            <div style='font-size: 1.5rem; font-weight: 800; color: #10b981;'>{soil_type}</div>
+        # Parameter explanation with tooltips
+        st.markdown("""
+        <div style='background: rgba(240, 253, 244, 0.5); border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem;'>
+            <p style='color: #475569; font-size: 0.95rem; margin: 0;'>
+                <span style='font-weight: 600;'>These parameters</span> are derived from your selected soil type and the CNN analysis of your plant image. They influence the root growth simulation.
+            </p>
         </div>
         """, unsafe_allow_html=True)
-    
-    with u2:
-        moisture_visual = "💧" if moisture > 50 else "🏜️"
-        st.markdown(f"""
-        <div style='background: rgba(255, 255, 255, 0.6); border-left: 4px solid #0ea5e9; border-radius: 0.75rem; padding: 1.5rem; text-align: center;'>
-            <div style='font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem;'>{moisture_visual} Moisture</div>
-            <div style='font-size: 1.5rem; font-weight: 800; color: #0ea5e9;'>{moisture}%</div>
-            <div class='gauge-container' style='margin-top: 0.75rem;'>
-                <div class='gauge-bar'>
-                    <div class='gauge-fill moisture' style='width: {moisture}%;'>
-                        <span class='gauge-percentage' style='display: {("inline" if moisture > 10 else "none")};'>{moisture}%</span>
+
+        u1, u2, u3 = st.columns(3)
+
+        with u1:
+            st.markdown(f"""
+            <div style='background: rgba(255, 255, 255, 0.6); border-left: 4px solid #10b981; border-radius: 0.75rem; padding: 1.5rem; text-align: center;'>
+                <div style='font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem;'>🌍 Soil Type</div>
+                <div style='font-size: 1.5rem; font-weight: 800; color: #10b981;'>{soil_type}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with u2:
+            moisture_visual = "💧" if moisture > 50 else "🏜️"
+            st.markdown(f"""
+            <div style='background: rgba(255, 255, 255, 0.6); border-left: 4px solid #0ea5e9; border-radius: 0.75rem; padding: 1.5rem; text-align: center;'>
+                <div style='font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem;'>{moisture_visual} Moisture</div>
+                <div style='font-size: 1.5rem; font-weight: 800; color: #0ea5e9;'>{moisture}%</div>
+                <div class='gauge-container' style='margin-top: 0.75rem;'>
+                    <div class='gauge-bar'>
+                        <div class='gauge-fill moisture' style='width: {moisture}%;'>
+                            <span class='gauge-percentage' style='display: {("inline" if moisture > 10 else "none")};'>{moisture}%</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with u3:
-        nutrient_visual = "🌱" if nutrient > 50 else "⚠️"
-        st.markdown(f"""
-        <div style='background: rgba(255, 255, 255, 0.6); border-left: 4px solid #22c55e; border-radius: 0.75rem; padding: 1.5rem; text-align: center;'>
-            <div style='font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem;'>{nutrient_visual} Nutrients</div>
-            <div style='font-size: 1.5rem; font-weight: 800; color: #22c55e;'>{nutrient}%</div>
-            <div class='gauge-container' style='margin-top: 0.75rem;'>
-                <div class='gauge-bar'>
-                    <div class='gauge-fill nutrients' style='width: {nutrient}%;'>
-                        <span class='gauge-percentage' style='display: {("inline" if nutrient > 10 else "none")};'>{nutrient}%</span>
+            """, unsafe_allow_html=True)
+        
+        with u3:
+            nutrient_visual = "🌱" if nutrient > 50 else "⚠️"
+            st.markdown(f"""
+            <div style='background: rgba(255, 255, 255, 0.6); border-left: 4px solid #22c55e; border-radius: 0.75rem; padding: 1.5rem; text-align: center;'>
+                <div style='font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem;'>{nutrient_visual} Nutrients</div>
+                <div style='font-size: 1.5rem; font-weight: 800; color: #22c55e;'>{nutrient}%</div>
+                <div class='gauge-container' style='margin-top: 0.75rem;'>
+                    <div class='gauge-bar'>
+                        <div class='gauge-fill nutrients' style='width: {nutrient}%;'>
+                            <span class='gauge-percentage' style='display: {("inline" if nutrient > 10 else "none")};'>{nutrient}%</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    # -------------------------------------------------
-    # RECOMMENDED ACTIONS BASED ON ANALYSIS
-    # -------------------------------------------------
-    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.markdown("### 💡 Recommendations")
+    if not st.session_state.get('pro_mode', False):
+        # -------------------------------------------------
+        # RECOMMENDED ACTIONS BASED ON ANALYSIS
+        # -------------------------------------------------
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        st.markdown("### 💡 Recommendations")
 
-    actions = []
-    if moisture < 45:
-        actions.append(("💧", "Increase irrigation", "Soil moisture is low. Provide consistent watering to avoid stress."))
-    elif moisture > 70:
-        actions.append(("🌧️", "Improve drainage", "Soil moisture is high. Ensure proper drainage to prevent root rot."))
-    else:
-        actions.append(("✅", "Moisture optimal", f"Soil moisture at {moisture}% is within a healthy range."))
+        actions = []
+        if moisture < 45:
+            actions.append(("💧", "Increase irrigation", "Soil moisture is low. Provide consistent watering to avoid stress."))
+        elif moisture > 70:
+            actions.append(("🌧️", "Improve drainage", "Soil moisture is high. Ensure proper drainage to prevent root rot."))
+        else:
+            actions.append(("✅", "Moisture optimal", f"Soil moisture at {moisture}% is within a healthy range."))
 
-    if nutrient < 45:
-        actions.append(("🌿", "Apply fertilizer", "Nutrient level is low. Add balanced fertilizer to improve growth."))
-    else:
-        actions.append(("🧪", "Maintain nutrients", "Nutrient availability is adequate. Maintain current regimen."))
+        if nutrient < 45:
+            actions.append(("🌿", "Apply fertilizer", "Nutrient level is low. Add balanced fertilizer to improve growth."))
+        else:
+            actions.append(("🧪", "Maintain nutrients", "Nutrient availability is adequate. Maintain current regimen."))
 
-    if label and isinstance(label, str):
-        actions.append(("🩺", "Monitor stress", f"Detected stress state: {label}. Monitor plant response and adjust care."))
-    
-    for i, (icon, title, description) in enumerate(actions, 1):
-        st.markdown(f"""
-        <div style='display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.05);'>
-            <div style='background: #f5f5f7; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;'>{icon}</div>
-            <div>
-                <div style='font-weight: 600; color: #1d1d1f; margin-bottom: 0.25rem;'>{title}</div>
-                <div style='color: #86868b; font-size: 0.95rem; line-height: 1.4;'>{description}</div>
+        if label and isinstance(label, str):
+            actions.append(("🩺", "Monitor stress", f"Detected stress state: {label}. Monitor plant response and adjust care."))
+        
+        for i, (icon, title, description) in enumerate(actions, 1):
+            st.markdown(f"""
+            <div style='display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.05);'>
+                <div style='background: #f5f5f7; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;'>{icon}</div>
+                <div>
+                    <div style='font-weight: 600; color: #1d1d1f; margin-bottom: 0.25rem;'>{title}</div>
+                    <div style='color: #86868b; font-size: 0.95rem; line-height: 1.4;'>{description}</div>
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # -------------------------------------------------
     # SIMULATION TRIGGER WITH CTA
     # -------------------------------------------------
-    st.markdown("<div class='section-separator'>🌱 Root Growth Simulation</div>", unsafe_allow_html=True)
-    st.markdown("<a id='simulate-root'></a>", unsafe_allow_html=True)
-    st.markdown("""
-    <div style='margin: 2rem 0;'>
-        <p style='text-align: center; color: #ffffff; font-size: 0.95rem; margin-bottom: 1rem;'>
-            <strong>Ready to simulate root growth?</strong> Click below to generate a detailed visualization based on the analysis.
-        </p>
+    if st.session_state.get('pro_mode', False):
+        curr_sim_ctx = tab_simulate
+    else:
+        curr_sim_ctx = st.container()
+
+    with curr_sim_ctx:
+        st.markdown("<div class='section-separator'>🌱 Root Growth Simulation</div>", unsafe_allow_html=True)
+        st.markdown("<a id='simulate-root'></a>", unsafe_allow_html=True)
+        st.markdown("""
+        <div style='margin: 2rem 0;'>
+            <p style='text-align: center; color: #ffffff; font-size: 0.95rem; margin-bottom: 1rem;'>
+                <strong>Ready to simulate root growth?</strong> Click below to generate a detailed visualization based on the analysis.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        sim_btn = st.button("🌿 Simulate Root Growth", type="primary", key="sim_btn_pro" if st.session_state.get('pro_mode', False) else "sim_btn_std", use_container_width=True)
+        
+        if sim_btn:
+            # Update progress step
+            st.session_state.current_step = 2
+            
+            with st.spinner("Simulating root growth..."):
+                segments = cached_simulate_root(moisture, nutrient, soil_type)
+                realism_score, ai_feedback = evaluate_root_realism(segments)
+                render_cfg = ai_render_params(realism_score)
+                
+                max_depth = max(r["y2"] for r in segments)
+                total_length = sum(math.dist((r["x1"], r["y1"]), (r["x2"], r["y2"])) for r in segments)
+                spread = max(abs(r["x2"]) for r in segments)
+                hair_count = sum(1 for r in segments if r["thickness"] < 0.7)
+                
+                metrics_for_llm = {
+                    "max_depth_cm": round(max_depth, 2),
+                    "total_length_cm": round(total_length, 2),
+                    "horizontal_spread_cm": round(spread, 2),
+                    "root_hair_count": hair_count,
+                    "realism_score": realism_score,
+                    "cnn_confidence": round(confidence, 3),
+                    "cnn_reliability": "LOW" if cnn_weak else "HIGH"
+                }
+                llm_feedback = cached_llm_analysis(metrics_for_llm, soil_type)
+            
+            update_dashboard_stats('simulation')
+            try:
+                increment_stat('total_simulations')
+            except Exception as e:
+                print(f"Failed to increment simulation stats: {e}")
+                
+            st.session_state.current_step = 3
+            st.subheader("🌱 AI-Enhanced Root System")
+            
+            viz_tab1, viz_tab2, viz_tab3 = st.tabs(["📊 2D", "🌐 3D", "📈 Metrics"])
+            # Existing visualization code continues...
+        
+            with viz_tab1:
+                # ============================================
+                # SIMPLE CLEAN ROOT VISUALIZATION
+                # ============================================
+                import matplotlib.patches as mpatches
+                
+                # Responsive figure size
+                fig, ax = plt.subplots(figsize=(4, 5), dpi=100)
+                
+                # Separate main roots and root hairs
+                main_roots = [r for r in segments if not r.get("is_hair", False)]
+                root_hairs = [r for r in segments if r.get("is_hair", False)]
+                
+                # Calculate bounds from main roots only
+                if main_roots:
+                    xs = [r["x1"] for r in main_roots] + [r["x2"] for r in main_roots]
+                    ys = [r["y2"] for r in main_roots]
+                    x_spread = max(abs(min(xs)), abs(max(xs))) if xs else 50
+                    y_max = max(ys) if ys else 150
+                else:
+                    x_spread = 50
+                    y_max = 150
+                
+                # White background
+                ax.set_facecolor('#ffffff')
+                fig.patch.set_facecolor('#ffffff')
+                
+                # Ground line
+                ax.axhline(0, color='#3d7a3d', linewidth=2.5, zorder=50)
+                
+                # Draw root hairs first (behind main roots)
+                for r in root_hairs:
+                    ax.plot(
+                        [r["x1"], r["x2"]],
+                        [r["y1"], r["y2"]],
+                        linewidth=0.3,
+                        color='#a08060',
+                        alpha=0.4,
+                        solid_capstyle='round',
+                        zorder=5
+                    )
+                
+                # Draw main roots (centered at x=0)
+                for r in main_roots:
+                    depth_ratio = min(r["y2"] / max(y_max, 1), 1.0)
+                    
+                    # Color: brown, darker near surface
+                    color_r = 0.4 + depth_ratio * 0.25
+                    color_g = 0.25 + depth_ratio * 0.15
+                    color_b = 0.12 + depth_ratio * 0.08
+                    color = (min(color_r, 0.75), min(color_g, 0.5), min(color_b, 0.3))
+                    
+                    # Line width based on thickness
+                    lw = max(0.5, r["thickness"] * 0.8 * (1 - depth_ratio * 0.3))
+                    
+                    ax.plot(
+                        [r["x1"], r["x2"]],
+                        [r["y1"], r["y2"]],
+                        linewidth=lw,
+                        color=color,
+                        alpha=0.85,
+                        solid_capstyle='round',
+                        zorder=10
+                    )
+                
+                # Root crown (centered)
+                crown = mpatches.Ellipse((0, -1), 6, 3, angle=0,
+                                        facecolor='#4a3020', edgecolor='#2a1810',
+                                        linewidth=2, zorder=100)
+                ax.add_patch(crown)
+                
+                # Depth scale
+                scale_x = x_spread + 8
+                for d in [0, 50, 100, 150, 200]:
+                    if d <= y_max:
+                        ax.text(scale_x, d, f'{d} cm', fontsize=7, color='#666', va='center')
+                
+                # Configure axes - centered around x=0
+                ax.set_xlim(-x_spread - 12, x_spread + 18)
+                ax.set_ylim(-8, y_max * 1.05)
+                ax.invert_yaxis()
+                
+                for spine in ax.spines.values():
+                    spine.set_visible(False)
+                ax.set_xticks([])
+                ax.set_yticks([])
+                
+                ax.set_title(f'Vetiver Root System\nM:{moisture:.0f}% N:{nutrient:.0f}% {soil_type}',
+                            fontsize=9, color='#333', pad=8)
+                
+                plt.tight_layout()
+                st.pyplot(fig, use_container_width=True)
+                plt.close(fig)
+        
+            with viz_tab2:
+                # Interactive 3D Plotly visualization
+                st.markdown("""
+                <p style='color: #64748b; font-size: 0.8rem; text-align: center; margin-bottom: 0.5rem;'>
+                    Drag to rotate • Pinch to zoom
+                </p>
+                """, unsafe_allow_html=True)
+            
+                fig_3d = create_root_3d_visualization(segments, max_depth)
+                if fig_3d:
+                    st.plotly_chart(fig_3d, use_container_width=True, config={'displayModeBar': True})
+        
+            with viz_tab3:
+                # Metrics radar chart
+                st.markdown("""
+                <p style='color: #64748b; font-size: 0.9rem; text-align: center; margin-bottom: 1rem;'>
+                    Root system metrics visualization
+                </p>
+                """, unsafe_allow_html=True)
+            
+                radar_fig = create_metrics_radar_chart(metrics_for_llm)
+                if radar_fig:
+                    st.plotly_chart(radar_fig, use_container_width=True, config={'displayModeBar': False})
+
+            # -------------------------------------------------
+            # DOWNLOAD
+            # -------------------------------------------------
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
+            buf.seek(0)
+
+            d1, d2, d3 = st.columns([1, 2, 1])
+            with d2:
+                st.download_button(
+                    "⬇️ Download Root Image (PNG)",
+                    data=buf,
+                    file_name="vetiver_root_ai.png",
+                    mime="image/png",
+                    use_container_width=True
+                )
+
+            st.divider()
+
+            # -------------------------------------------------
+            # ANALYTICS DASHBOARD - ENHANCED
+            # -------------------------------------------------
+            st.markdown("<div class='results-section-card'>", unsafe_allow_html=True)
+            st.markdown("### 📊 Root System Analytics")
+        
+            st.markdown("""
+            <p style='color: #475569; font-size: 0.95rem; margin: 0 0 1.5rem 0;'>
+                Detailed metrics of the simulated root architecture based on your plant's stress state.
+            </p>
+            """, unsafe_allow_html=True)
+        
+            # Metrics in enhanced card layout
+            st.markdown("""
+    <div class='analytics-grid'>
+        <div class='analytics-box'>
+            <div class='analytics-icon'>📏</div>
+            <div class='analytics-value'>""" + f"{round(max_depth, 2)}" + """</div>
+            <div class='analytics-label'>Max Depth (cm)</div>
+        </div>
+        <div class='analytics-box'>
+            <div class='analytics-icon'>➰</div>
+            <div class='analytics-value'>""" + f"{round(total_length, 2)}" + """</div>
+            <div class='analytics-label'>Total Length (cm)</div>
+        </div>
+        <div class='analytics-box'>
+            <div class='analytics-icon'>↔️</div>
+            <div class='analytics-value'>""" + f"{round(spread, 2)}" + """</div>
+            <div class='analytics-label'>Horiz. Spread (cm)</div>
+        </div>
+        <div class='analytics-box'>
+            <div class='analytics-icon'>🔬</div>
+            <div class='analytics-value'>""" + f"{hair_count}" + """</div>
+            <div class='analytics-label'>Root Hairs</div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    if st.button("🌿 Simulate Root Growth", use_container_width=True, type="primary"):
-        # Update progress step
-        st.session_state.current_step = 2
         
-        with st.spinner("Simulating root growth..."):
-            segments = cached_simulate_root(moisture, nutrient, soil_type)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-            realism_score, ai_feedback = evaluate_root_realism(segments)
-            render_cfg = ai_render_params(realism_score)
-
-        # -------------------------------------------------
-        # ANALYTICS
-        # -------------------------------------------------
-            max_depth = max(r["y2"] for r in segments)
-            total_length = sum(
-                math.dist((r["x1"], r["y1"]), (r["x2"], r["y2"]))
-                for r in segments
-            )
-            spread = max(abs(r["x2"]) for r in segments)
-            hair_count = sum(1 for r in segments if r["thickness"] < 0.7)
-
-        # -------------------------------------------------
-        # LLM BIOLOGICAL INTERPRETATION
-        # -------------------------------------------------
-            metrics_for_llm = {
-                "max_depth_cm": round(max_depth, 2),
-                "total_length_cm": round(total_length, 2),
-                "horizontal_spread_cm": round(spread, 2),
-                "root_hair_count": hair_count,
-                "realism_score": realism_score,
-                "cnn_confidence": round(confidence, 3),
-                "cnn_reliability": "LOW" if cnn_weak else "HIGH"
-            }
-
-            llm_feedback = cached_llm_analysis(metrics_for_llm, soil_type)
+            # -------------------------------------------------
+            # AI FEEDBACK & REALISM ASSESSMENT
+            # -------------------------------------------------
+            st.markdown("<div class='results-section-card'>", unsafe_allow_html=True)
+            st.markdown("### 🤖 AI Realism Assessment")
         
-        # Update dashboard stats for simulation
-        update_dashboard_stats('simulation')
-        
-        # Update progress to report stage
-        st.session_state.current_step = 3
-
-        # -------------------------------------------------
-        # VISUALIZATION TABS: 2D (Matplotlib) and 3D (Plotly)
-        # -------------------------------------------------
-        st.subheader("🌱 AI-Enhanced Root System")
-        
-        viz_tab1, viz_tab2, viz_tab3 = st.tabs(["📊 2D View", "🌐 3D Interactive", "📈 Metrics Radar"])
-        
-        with viz_tab1:
-            # Original matplotlib visualization
-            fig, ax = plt.subplots(figsize=(3.3, 5.0), dpi=160)
-
-            ax.axhline(0, color="#3b2f1e", linewidth=2)
-
-            xs = [r["x1"] for r in segments] + [r["x2"] for r in segments]
-            center_x = np.mean(xs)
-
-            for r in segments:
-                depth_ratio = min(r["y2"] / max_depth, 1.0)
-
-                lw = r["thickness"] * render_cfg["thickness_scale"]
-                lw *= (1 - 0.6 * depth_ratio)
-                lw = max(lw, 0.6)
-
-                alpha = render_cfg["alpha"] * (1 - depth_ratio * render_cfg["depth_fade"])
-                alpha = min(max(alpha, 0.08), 1.0)
-
-                color = (
-                    0.55 - 0.4 * depth_ratio,
-                    0.38 - 0.28 * depth_ratio,
-                    0.18 - 0.15 * depth_ratio
-                )
-
-                ax.plot(
-                    [(r["x1"] - center_x), (r["x2"] - center_x)],
-                    [r["y1"], r["y2"]],
-                    linewidth=lw,
-                    color=color,
-                    alpha=alpha,
-                    solid_capstyle="round"
-                )
-
-            ax.set_xlim(min(xs) - center_x - 0.6, max(xs) - center_x + 0.6)
-            ax.set_ylim(-0.3, max_depth + 0.8)
-            ax.invert_yaxis()
-            ax.axis("off")
-            ax.set_facecolor("#1b140f")
-
-            # Add parameters text on canvas
-            params_text = f"Moisture: {moisture:.1f}% | Nutrient: {nutrient:.1f}% | Soil: {soil_type}"
-            ax.text(
-                0.5, 0.02, params_text,
-                transform=ax.transAxes,
-                ha='center', va='bottom',
-                fontsize=10, color='#10b981',
-                weight='bold',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='#2a2a2a', edgecolor='#10b981', linewidth=1.5)
-            )
-
-            st.pyplot(fig, use_container_width=False)
-        
-        with viz_tab2:
-            # Interactive 3D Plotly visualization
-            st.markdown("""
-            <p style='color: #64748b; font-size: 0.9rem; text-align: center; margin-bottom: 1rem;'>
-                🖱️ Drag to rotate • Scroll to zoom • Double-click to reset
-            </p>
-            """, unsafe_allow_html=True)
-            
-            fig_3d = create_root_3d_visualization(segments, max_depth)
-            if fig_3d:
-                st.plotly_chart(fig_3d, use_container_width=True, config={'displayModeBar': True})
-        
-        with viz_tab3:
-            # Metrics radar chart
-            st.markdown("""
-            <p style='color: #64748b; font-size: 0.9rem; text-align: center; margin-bottom: 1rem;'>
-                Root system metrics visualization
-            </p>
-            """, unsafe_allow_html=True)
-            
-            radar_fig = create_metrics_radar_chart(metrics_for_llm)
-            if radar_fig:
-                st.plotly_chart(radar_fig, use_container_width=True, config={'displayModeBar': False})
-
-        # -------------------------------------------------
-        # DOWNLOAD
-        # -------------------------------------------------
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
-        buf.seek(0)
-
-        d1, d2, d3 = st.columns([1, 2, 1])
-        with d2:
-            st.download_button(
-                "⬇️ Download Root Image (PNG)",
-                data=buf,
-                file_name="vetiver_root_ai.png",
-                mime="image/png",
-                use_container_width=True
-            )
-
-        st.divider()
-
-        # -------------------------------------------------
-        # ANALYTICS DASHBOARD - ENHANCED
-        # -------------------------------------------------
-        st.markdown("<div class='results-section-card'>", unsafe_allow_html=True)
-        st.markdown("### 📊 Root System Analytics")
-        
-        st.markdown("""
-        <p style='color: #475569; font-size: 0.95rem; margin: 0 0 1.5rem 0;'>
-            Detailed metrics of the simulated root architecture based on your plant's stress state.
-        </p>
-        """, unsafe_allow_html=True)
-        
-        # Metrics in enhanced card layout
-        st.markdown("""
-<div class='analytics-grid'>
-    <div class='analytics-box'>
-        <div class='analytics-icon'>📏</div>
-        <div class='analytics-value'>""" + f"{round(max_depth, 2)}" + """</div>
-        <div class='analytics-label'>Max Depth (cm)</div>
-    </div>
-    <div class='analytics-box'>
-        <div class='analytics-icon'>➰</div>
-        <div class='analytics-value'>""" + f"{round(total_length, 2)}" + """</div>
-        <div class='analytics-label'>Total Length (cm)</div>
-    </div>
-    <div class='analytics-box'>
-        <div class='analytics-icon'>↔️</div>
-        <div class='analytics-value'>""" + f"{round(spread, 2)}" + """</div>
-        <div class='analytics-label'>Horiz. Spread (cm)</div>
-    </div>
-    <div class='analytics-box'>
-        <div class='analytics-icon'>🔬</div>
-        <div class='analytics-value'>""" + f"{hair_count}" + """</div>
-        <div class='analytics-label'>Root Hairs</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-        
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        # -------------------------------------------------
-        # AI FEEDBACK & REALISM ASSESSMENT
-        # -------------------------------------------------
-        st.markdown("<div class='results-section-card'>", unsafe_allow_html=True)
-        st.markdown("### 🤖 AI Realism Assessment")
-        
-        st.markdown(f"""
-<div style='display: flex; align-items: center; gap: 2rem; margin-bottom: 1.5rem;'>
-    <div style='flex: 0 0 auto;'>
-        <div style='text-align: center; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%); border-radius: 1rem; padding: 1.5rem;'>
-            <div style='font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem;'>Realism Score</div>
-            <div style='font-size: 2rem; font-weight: 900; color: #10b981;'>{realism_score}</div>
-            <div style='font-size: 0.9rem; color: #475569;'>/ 100</div>
-        </div>
-    </div>
-    <div style='flex: 1;'>
-        <h4 style='color: #0f172a; margin: 0 0 0.75rem 0; font-weight: 700;'>📋 Key Observations</h4>
-        <ul style='margin: 0; padding-left: 1.5rem;'>
-""", unsafe_allow_html=True)
-        
-        for observation in ai_feedback:
-            st.markdown(f"<li style='color: #475569; margin-bottom: 0.5rem; line-height: 1.5;'>{observation}</li>", unsafe_allow_html=True)
-        
-        st.markdown("""
-                </ul>
+            st.markdown(f"""
+    <div style='display: flex; align-items: center; gap: 2rem; margin-bottom: 1.5rem;'>
+        <div style='flex: 0 0 auto;'>
+            <div style='text-align: center; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%); border-radius: 1rem; padding: 1.5rem;'>
+                <div style='font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem;'>Realism Score</div>
+                <div style='font-size: 2rem; font-weight: 900; color: #10b981;'>{realism_score}</div>
+                <div style='font-size: 0.9rem; color: #475569;'>/ 100</div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        <div style='flex: 1;'>
+            <h4 style='color: #0f172a; margin: 0 0 0.75rem 0; font-weight: 700;'>📋 Key Observations</h4>
+            <ul style='margin: 0; padding-left: 1.5rem;'>
+    """, unsafe_allow_html=True)
         
-        st.markdown("</div>", unsafe_allow_html=True)
+            for observation in ai_feedback:
+                st.markdown(f"<li style='color: #475569; margin-bottom: 0.5rem; line-height: 1.5;'>{observation}</li>", unsafe_allow_html=True)
+        
+            st.markdown("""
+                    </ul>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("""
-        <div style='height: 2px; background: linear-gradient(90deg, transparent, var(--primary-green), transparent); margin: 2rem 0;'></div>
-        """, unsafe_allow_html=True)
+            st.markdown("""
+            <div style='height: 2px; background: linear-gradient(90deg, transparent, var(--primary-green), transparent); margin: 2rem 0;'></div>
+            """, unsafe_allow_html=True)
 
-        # -------------------------------------------------
-        # AI BIOLOGICAL EXPLANATION - ENHANCED
-        # -------------------------------------------------
-        st.markdown("<div class='results-section-card'>", unsafe_allow_html=True)
-        st.markdown("### 🧬 AI Biological Explanation")
-        st.markdown("""
-        <p style='color: #475569; font-size: 0.95rem; margin: 0 0 1.5rem 0;'>
-            Based on the CNN analysis and root simulation, here's the biological interpretation of your plant's stress state and root development:
-        </p>
-        """, unsafe_allow_html=True)
+            # -------------------------------------------------
+            # AI BIOLOGICAL EXPLANATION - ENHANCED
+            # -------------------------------------------------
+            st.markdown("<div class='results-section-card'>", unsafe_allow_html=True)
+            st.markdown("### 🧬 AI Biological Explanation")
+            st.markdown("""
+            <p style='color: #475569; font-size: 0.95rem; margin: 0 0 1.5rem 0;'>
+                Based on the CNN analysis and root simulation, here's the biological interpretation of your plant's stress state and root development:
+            </p>
+            """, unsafe_allow_html=True)
         
-        st.markdown(f"""
-        <div style='background: rgba(240, 253, 244, 0.5); border-left: 4px solid var(--primary-green); border-radius: 0.75rem; padding: 1.5rem; line-height: 1.8;'>
-            {llm_feedback}
-        </div>
-        """, unsafe_allow_html=True)
+            st.markdown(f"""
+            <div style='background: rgba(240, 253, 244, 0.5); border-left: 4px solid var(--primary-green); border-radius: 0.75rem; padding: 1.5rem; line-height: 1.8;'>
+                {llm_feedback}
+            </div>
+            """, unsafe_allow_html=True)
         
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
 # 👇 THIS ELSE MUST ALIGN WITH: if uploaded_file:
 else:

@@ -79,16 +79,17 @@ def llm_biological_analysis(metrics, soil_type):
         return generate_fallback_analysis(metrics, soil_type)
 
     prompt = f"""
-    You are a plant root system expert.
+    You are a Vetiver grass (Chrysopogon zizanioides) root system expert.
+    This application is specifically designed for Vetiver plant analysis.
 
     Soil type: {soil_type}
     Root growth metrics:
     {metrics}
 
     Explain in simple scientific terms:
-    1. Whether this root structure is biologically realistic
-    2. Why the branching and depth occurred in this soil
-    3. One realistic improvement suggestion
+    1. Whether this Vetiver root structure is biologically realistic
+    2. Why the branching and depth occurred in this soil (Vetiver is known for deep, fibrous roots)
+    3. One realistic improvement suggestion for Vetiver root health
     
     Keep your response concise (under 200 words).
     """
@@ -128,18 +129,20 @@ def llm_explain_plant_analysis(species, health_score, moisture, nutrient, stress
         return generate_fallback_plant_explanation(species, health_score, moisture, nutrient, stress_label)
     
     prompt = f"""
-    You are a plant health expert. Analyze this plant data and provide insights.
+    You are a Vetiver grass (Chrysopogon zizanioides) expert. This application only analyzes Vetiver plants.
 
-    Species: {species}
+    Detected Species: {species}
     Health Score: {health_score}/100
     Moisture Level: {moisture}%
     Nutrient Level: {nutrient}%
     Stress Status: {stress_label}
 
+    If the species is NOT Vetiver, note that the analysis may be inaccurate.
+    
     Provide a brief analysis (under 150 words) covering:
-    1. Plant type characteristics (2-3 sentences about this plant species)
-    2. Current health assessment
-    3. One actionable recommendation
+    1. Vetiver grass characteristics (tall perennial grass, dense clumping, deep roots up to 3-4 meters)
+    2. Current health assessment based on the metrics
+    3. One actionable recommendation specific to Vetiver care
 
     Format your response as clear paragraphs, not bullet points.
     """
@@ -164,7 +167,7 @@ def llm_explain_root_analysis(species, health_index, water_efficiency, nutrient_
         return generate_fallback_root_explanation(species, health_index, water_efficiency, nutrient_efficiency, root_type)
     
     prompt = f"""
-    You are a plant root system expert. Analyze this root data and provide insights.
+    You are a Vetiver grass root system expert. This application only analyzes Vetiver roots.
 
     Root Species: {species}
     Root Type: {root_type}
@@ -172,10 +175,12 @@ def llm_explain_root_analysis(species, health_index, water_efficiency, nutrient_
     Water Efficiency: {water_efficiency}%
     Nutrient Efficiency: {nutrient_efficiency}%
 
+    If the root is NOT Vetiver, note that the analysis may be inaccurate.
+
     Provide a brief analysis (under 150 words) covering:
-    1. Root type characteristics (2-3 sentences about this root system type)
-    2. Current root health assessment
-    3. One actionable recommendation for root improvement
+    1. Vetiver root characteristics (deep fibrous roots, can reach 3-4m depth, excellent for erosion control)
+    2. Current root health assessment based on the metrics
+    3. One actionable recommendation for Vetiver root improvement
 
     Format your response as clear paragraphs, not bullet points.
     """
@@ -223,28 +228,34 @@ This root system demonstrates {'strong' if realism > 70 else 'moderate' if reali
 
 
 def generate_fallback_plant_explanation(species, health_score, moisture, nutrient, stress_label):
-    """Fallback plant explanation when LLM is unavailable."""
+    """Fallback plant explanation when LLM is unavailable - Vetiver focused."""
     health_status = "excellent" if health_score >= 80 else "good" if health_score >= 60 else "concerning" if health_score >= 40 else "poor"
     
+    is_vetiver = "vetiver" in species.lower()
+    species_note = "" if is_vetiver else f"\n\n⚠️ Note: This application is optimized for Vetiver Grass. The detected species ({species}) may result in less accurate analysis."
+    
     return f"""
-**{species}** is a versatile plant species commonly used for soil stabilization and erosion control. It's known for its deep root system and adaptability to various soil conditions.
+**Vetiver Grass (Chrysopogon zizanioides)** is a perennial bunchgrass known for its deep, dense root system that can reach 3-4 meters depth. It's widely used for soil stabilization, erosion control, and phytoremediation.
 
 Your plant shows {health_status} overall health with a score of {health_score}/100. Current moisture level is at {moisture}% and nutrient absorption is at {nutrient}%. The stress analysis indicates: {stress_label}.
 
-{"Continue your current care routine to maintain plant health." if health_score >= 60 else "Consider adjusting watering schedule and checking soil nutrient levels to improve plant health."}
+{"Vetiver is drought-tolerant - continue your current care routine." if health_score >= 60 else "Consider checking soil drainage and ensuring adequate sunlight for optimal Vetiver growth."}{species_note}
 """
 
 
 def generate_fallback_root_explanation(species, health_index, water_efficiency, nutrient_efficiency, root_type):
-    """Fallback root explanation when LLM is unavailable."""
+    """Fallback root explanation when LLM is unavailable - Vetiver focused."""
     health_status = "excellent" if health_index >= 80 else "good" if health_index >= 60 else "fair" if health_index >= 40 else "poor"
     
+    is_vetiver = "vetiver" in species.lower()
+    species_note = "" if is_vetiver else f"\n\n⚠️ Note: This application is optimized for Vetiver roots. Non-Vetiver roots ({species}) may show less accurate metrics."
+    
     return f"""
-The **{root_type}** root system of {species} demonstrates typical characteristics for this species. This root architecture is designed for efficient resource acquisition and soil anchoring.
+**Vetiver Root System** is renowned for its exceptional depth (up to 3-4 meters) and dense, fibrous structure. The {root_type} architecture provides excellent soil binding, erosion control, and water filtration capabilities.
 
 Root health index is {health_status} at {health_index}/100. Water uptake efficiency is at {water_efficiency}% and nutrient absorption efficiency is at {nutrient_efficiency}%. These metrics indicate {'optimal' if health_index >= 70 else 'adequate' if health_index >= 50 else 'suboptimal'} root function.
 
-{"The root system appears healthy. Maintain current soil conditions." if health_index >= 60 else "Consider improving soil aeration and drainage to enhance root development."}
+{"The Vetiver root system appears healthy. Maintain current soil conditions for continued deep root development." if health_index >= 60 else "Consider improving soil aeration and reducing compaction to enhance Vetiver root penetration."}{species_note}
 """
 
 

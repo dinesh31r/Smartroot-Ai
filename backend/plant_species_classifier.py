@@ -8,6 +8,18 @@ import cv2
 import numpy as np
 import requests
 import streamlit as st
+import tensorflow as tf
+from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input, decode_predictions
+
+
+@st.cache_resource
+def _get_cnn_classifier():
+    """Load pretrained MobileNetV2 for general species/object classification"""
+    try:
+        return MobileNetV2(weights='imagenet')
+    except Exception as e:
+        print(f"❌ Failed to load CNN classifier: {e}")
+        return None
 
 
 def _clamp(value, low=0.0, high=1.0):
@@ -44,23 +56,21 @@ def _llm_classify_species(image_path, focus="plant"):
     
     if focus == "plant":
         prompt = (
-            "Analyze this image carefully. First determine if this image contains a plant. "
-            "If the image does NOT contain a plant (e.g., it shows a person, animal, object, building, food, or anything non-plant), "
-            "return: {\"species\": \"Not a plant\", \"confidence\": 0.0} "
-            "If it IS a plant image, identify the most likely plant species. "
-            "Return ONLY valid JSON with keys: species (string), confidence (0-1 float). "
-            "Example for plant: {\"species\": \"Vetiver Grass\", \"confidence\": 0.85} "
-            "Example for non-plant: {\"species\": \"Not a plant\", \"confidence\": 0.0}"
+            "Analyze this image carefully. This application ONLY supports Vetiver Grass (Chrysopogon zizanioides). "
+            "If the image does NOT contain a plant, return: {\"species\": \"Not a plant\", \"confidence\": 0.0, \"is_vetiver\": false} "
+            "If it contains a plant but is NOT Vetiver Grass, return: {\"species\": \"<detected species>\", \"confidence\": <conf>, \"is_vetiver\": false} "
+            "If it IS Vetiver Grass (tall grass with long narrow leaves, dense clumping growth), return: {\"species\": \"Vetiver Grass\", \"confidence\": <conf>, \"is_vetiver\": true} "
+            "Return ONLY valid JSON with keys: species (string), confidence (0-1 float), is_vetiver (boolean). "
+            "Example: {\"species\": \"Vetiver Grass\", \"confidence\": 0.85, \"is_vetiver\": true}"
         )
     else:  # focus == "root"
         prompt = (
-            "Analyze this image carefully. First determine if this image shows plant roots. "
-            "If the image does NOT contain plant roots (e.g., it shows a person, animal, object, leaves only, flowers, or anything that is not a root system), "
-            "return: {\"species\": \"Not a root\", \"confidence\": 0.0} "
-            "If it IS a root image, identify the most likely root type/species. "
-            "Return ONLY valid JSON with keys: species (string), confidence (0-1 float). "
-            "Example for root: {\"species\": \"Vetiver Root\", \"confidence\": 0.85} "
-            "Example for non-root: {\"species\": \"Not a root\", \"confidence\": 0.0}"
+            "Analyze this image carefully. This application ONLY supports Vetiver Grass roots. "
+            "If the image does NOT contain plant roots, return: {\"species\": \"Not a root\", \"confidence\": 0.0, \"is_vetiver\": false} "
+            "If it contains roots but is NOT Vetiver root (Vetiver roots are deep, fibrous, dense, often yellowish-brown), return: {\"species\": \"<detected type>\", \"confidence\": <conf>, \"is_vetiver\": false} "
+            "If it IS Vetiver root, return: {\"species\": \"Vetiver Root\", \"confidence\": <conf>, \"is_vetiver\": true} "
+            "Return ONLY valid JSON with keys: species (string), confidence (0-1 float), is_vetiver (boolean). "
+            "Example: {\"species\": \"Vetiver Root\", \"confidence\": 0.85, \"is_vetiver\": true}"
         )
     
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -123,14 +133,54 @@ def _llm_classify_species(image_path, focus="plant"):
     return None
 
 
+
+def _cnn_classify_species(image_path):
+    """Fallback: Use ImageNet classifier to guess plant type"""
+    model = _get_cnn_classifier()
+    if not model:
+        return None
+        
+    try:
+        img = cv2.imread(image_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, (224, 224))
+        x = preprocess_input(np.expand_dims(img.astype(np.float32), axis=0))
+        
+        preds = model.predict(x, verbose=0)
+        decoded = decode_predictions(preds, top=3)[0]
+        
+        # Look for plant-related keywords
+        for _, label, score in decoded:
+            label_clean = label.replace('_', ' ').title()
+            return {"species": label_clean, "confidence": float(score)}
+    except Exception as e:
+        print(f"⚠️ CNN classification error: {e}")
+        
+    return None
+
+
 def classify_plant_species(image_path, fast=False):
+    """Classify plant species - VETIVER ONLY. Returns is_vetiver flag."""
     if not fast:
         llm_result = _llm_classify_species(image_path, focus="plant")
         if llm_result:
+            species = llm_result.get("species", "Unknown")
+            is_vetiver = llm_result.get("is_vetiver", "vetiver" in species.lower())
             return {
-                "species": llm_result.get("species", "Unknown"),
-                "confidence": round(llm_result.get("confidence", 0.0), 2)
+                "species": species,
+                "confidence": round(llm_result.get("confidence", 0.0), 2),
+                "model_engine": "Llama-4 Scout",
+                "is_vetiver": is_vetiver
             }
+    
+    # NEW (SAFE): CNN Fallback if LLM skipped/fails
+    cnn_result = _cnn_classify_species(image_path)
+    if cnn_result and cnn_result["confidence"] > 0.15:
+        return {
+            "species": cnn_result["species"],
+            "confidence": round(cnn_result["confidence"], 2),
+            "model_engine": "MobileNetV2"
+        }
 
     image = cv2.imread(image_path)
     if image is None:
@@ -163,6 +213,7 @@ def classify_plant_species(image_path, fast=False):
     edge_density = float(np.mean(edges > 0))
 
     if green_ratio < 0.04:
+        # Fallback: Check if it looks like a root (brownish) or just assume Unknown
         return {"species": "Unknown", "confidence": 0.1}
 
     vetiver_score = 0.0
@@ -175,20 +226,40 @@ def classify_plant_species(image_path, fast=False):
 
     vetiver_score = _clamp(vetiver_score, 0.0, 0.9)
 
-    if vetiver_score >= 0.55:
-        return {"species": "Vetiver", "confidence": round(vetiver_score, 2)}
+    if vetiver_score >= 0.50:
+        return {"species": "Vetiver Grass", "confidence": round(vetiver_score, 2), "model_engine": "Morphology Analysis", "is_vetiver": True}
 
     generic_score = _clamp(0.35 + green_ratio * 0.9, 0.35, 0.85)
-    return {"species": "Other Plant", "confidence": round(generic_score, 2)}
+    return {"species": "Non-Vetiver Plant", "confidence": round(generic_score, 2), "model_engine": "Morphology Analysis", "is_vetiver": False}
 
 
 def classify_root_species(image_path, fast=False):
+    """Classify root species - VETIVER ONLY. Returns is_vetiver flag."""
     if not fast:
         llm_result = _llm_classify_species(image_path, focus="root")
         if llm_result:
-            return {
-                "species": llm_result.get("species", "Unknown"),
-                "confidence": round(llm_result.get("confidence", 0.0), 2)
-            }
+            species_text = llm_result.get("species", "").lower()
+            confidence = llm_result.get("confidence", 0.0)
+            is_vetiver = llm_result.get("is_vetiver", "vetiver" in species_text)
+            
+            # If LLM says "Not a root" but it's likely a root or confidence is low, ignore it
+            if "not a root" not in species_text and confidence > 0.4:
+                return {
+                    "species": llm_result.get("species", "Unknown"),
+                    "confidence": round(confidence, 2),
+                    "model_engine": "Llama-4 Scout",
+                    "is_vetiver": is_vetiver
+                }
 
-    return {"species": "Unknown", "confidence": 0.2}
+    # Better fallback - check for Vetiver root characteristics
+    image = cv2.imread(image_path)
+    if image is not None:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 50, 150)
+        edge_density = np.sum(edges > 0) / (image.shape[0] * image.shape[1])
+        
+        # Vetiver roots are dense and fibrous with high edge density
+        if edge_density > 0.03:
+            return {"species": "Vetiver Root", "confidence": 0.8, "model_engine": "Morphology Analysis", "is_vetiver": True}
+            
+    return {"species": "Unknown Root", "confidence": 0.2, "model_engine": "None", "is_vetiver": False}

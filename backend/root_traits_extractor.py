@@ -204,6 +204,19 @@ def extract_root_traits(image_path, fast=False):
     if mask_area == 0:
         raise ValueError("Root mask could not be extracted from image.")
 
+    # VALIDATION: Check if this actually looks like a root
+    # 1. Connectivity: Roots are connected. Noise is scattered.
+    # 2. Elongation: Roots are thin and long.
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    if num_labels > 1:
+        # Get largest component (excluding background 0)
+        largest_comp_idx = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
+        largest_area = stats[largest_comp_idx, cv2.CC_STAT_AREA]
+        
+        # If largest component is < 10% of total mask pixels, it's likely noise/scattered specks
+        if largest_area < (0.10 * mask_area):
+             raise ValueError("Image does not contain a coherent root system (too fragmented).")
+
     coords = np.column_stack(np.where(mask > 0))
     y_min, x_min = coords.min(axis=0)
     y_max, x_max = coords.max(axis=0)
